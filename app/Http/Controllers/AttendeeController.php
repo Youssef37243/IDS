@@ -35,13 +35,32 @@ class AttendeeController extends Controller
             'meeting_id' => 'sometimes|exists:meetings,id'
         ]);
 
-        $attendee->update($validated);
-        return response()->json($attendee);
+        try {
+            $attendee->update($validated);
+            return response()->json([
+                'message' => 'Attendee updated successfully',
+                'data' => $attendee->load(['user', 'meeting'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update attendee',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Attendee $attendee)
     {
-        $attendee->delete();
-        return response()->json(null, 204);
+        try {
+            $attendee->delete();
+            return response()->json([
+                'message' => 'Attendee deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete attendee',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

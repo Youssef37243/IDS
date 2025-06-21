@@ -41,13 +41,32 @@ class MinuteController extends Controller
             'summary_pdf' => 'nullable|string|max:255'
         ]);
 
-        $minute->update($validated);
-        return response()->json($minute);
+        try {
+            $minute->update($validated);
+            return response()->json([
+                'message' => 'Minute updated successfully',
+                'data' => $minute->load(['user', 'meeting', 'actionItems'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update minute',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Minute $minute)
     {
-        $minute->delete();
-        return response()->json(null, 204);
+        try {
+            $minute->delete();
+            return response()->json([
+                'message' => 'Minute deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete minute',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -41,13 +41,32 @@ class ActionItemController extends Controller
             'status' => 'sometimes|string|max:50'
         ]);
 
-        $actionItem->update($validated);
-        return response()->json($actionItem);
+        try {
+            $actionItem->update($validated);
+            return response()->json([
+                'message' => 'Action item updated successfully',
+                'data' => $actionItem->load(['user', 'minute'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update action item',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(ActionItem $actionItem)
     {
-        $actionItem->delete();
-        return response()->json(null, 204);
+        try {
+            $actionItem->delete();
+            return response()->json([
+                'message' => 'Action item deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete action item',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Meeting;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class MeetingController extends Controller
 {
@@ -43,13 +44,32 @@ class MeetingController extends Controller
             'agenda' => 'nullable|string'
         ]);
 
-        $meeting->update($validated);
-        return response()->json($meeting);
+        try {
+            $meeting->update($validated);
+            return response()->json([
+                'message' => 'Meeting updated successfully',
+                'data' => $meeting->load(['room', 'user', 'attendees'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update meeting',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Meeting $meeting)
     {
-        $meeting->delete();
-        return response()->json(null, 204);
+        try {
+            $meeting->delete();
+            return response()->json([
+                'message' => 'Meeting deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete meeting',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

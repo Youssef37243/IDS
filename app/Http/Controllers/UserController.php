@@ -41,13 +41,32 @@ class UserController extends Controller
             'role' => 'sometimes|string|max:50'
         ]);
 
-        $user->update($validated);
-        return response()->json($user);
+        try {
+            $user->update($validated);
+            return response()->json([
+                'message' => 'User updated successfully',
+                'data' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(User $user)
     {
-        $user->delete();
-        return response()->json(null, 204);
+        try {
+            $user->delete();
+            return response()->json([
+                'message' => 'User deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete user',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

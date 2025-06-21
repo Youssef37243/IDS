@@ -39,13 +39,32 @@ class NotificationController extends Controller
             'is_read' => 'sometimes|boolean'
         ]);
 
-        $notification->update($validated);
-        return response()->json($notification);
+        try {
+            $notification->update($validated);
+            return response()->json([
+                'message' => 'Notification updated successfully',
+                'data' => $notification->load(['user'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to update notification',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy(Notification $notification)
     {
-        $notification->delete();
-        return response()->json(null, 204);
+        try {
+            $notification->delete();
+            return response()->json([
+                'message' => 'Notification deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete notification',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
