@@ -3,8 +3,6 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
-
 Route::apiResource('users', \App\Http\Controllers\UserController::class);
 Route::apiResource('rooms', \App\Http\Controllers\RoomController::class);
 Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class);
