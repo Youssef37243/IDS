@@ -2,14 +2,31 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
-Route::apiResource('users', \App\Http\Controllers\UserController::class);
-Route::apiResource('rooms', \App\Http\Controllers\RoomController::class);
-Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class);
-Route::apiResource('attendees', \App\Http\Controllers\AttendeeController::class);
-Route::apiResource('minutes', \App\Http\Controllers\MinuteController::class);
-Route::apiResource('action-items', \App\Http\Controllers\ActionItemController::class);
-Route::apiResource('notifications', \App\Http\Controllers\NotificationController::class);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/jwt-login', [AuthController::class, 'jwtLogin']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('users', \App\Http\Controllers\UserController::class);
+    Route::apiResource('rooms', \App\Http\Controllers\RoomController::class);
+    Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class);
+    Route::apiResource('attendees', \App\Http\Controllers\AttendeeController::class);
+    Route::apiResource('minutes', \App\Http\Controllers\MinuteController::class);
+    Route::apiResource('action-items', \App\Http\Controllers\ActionItemController::class);
+    Route::apiResource('notifications', \App\Http\Controllers\NotificationController::class);
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+    Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
+    Route::get('/profile', [\App\Http\Controllers\AuthController::class, 'profile']);
+});
+
+Route::middleware('auth:api')->group(function () {
+    Route::get('/jwt-profile', [AuthController::class, 'jwtProfile']);
+    Route::post('/jwt-logout', [AuthController::class, 'jwtLogout']);
+});
 
 // Debug route to test database operations
 Route::get('/debug/rooms/{id}', function($id) {
@@ -63,8 +80,4 @@ Route::delete('/test/rooms/{id}', function($id) {
             'error' => $e->getMessage()
         ], 500);
     }
-});
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
 });

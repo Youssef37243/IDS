@@ -4,12 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class User extends Model
+class User extends Authenticatable implements JWTSubject
 {
-    public $timestamps = false;
+    use HasApiTokens, HasFactory;
 
-    use HasFactory;
+    public $timestamps = false;
 
     protected $fillable = [
         'first_name',
@@ -17,6 +20,10 @@ class User extends Model
         'email',
         'password_hash',
         'role'
+    ];
+
+    protected $hidden = [
+        'password_hash',
     ];
 
     public function meetings()
@@ -42,5 +49,22 @@ class User extends Model
     public function notifications()
     {
         return $this->hasMany(Notification::class);
+    }
+
+    // Mutator for password_hash
+    public function setPasswordHashAttribute($value)
+    {
+        $this->attributes['password_hash'] = password_hash($value, PASSWORD_BCRYPT);
+    }
+
+    // JWTSubject methods
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
     }
 }
