@@ -1,197 +1,234 @@
-    /**
-     * ADMIN PAGE - COMPLETE SOLUTION
-     */
-    function initAdmin() {
-    // Verify admin access
+function initAdmin() {
+    const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== 'admin') {
-        window.location.href = 'dashboard.html';
-        return;
+      window.location.href = '/dashboard';
+      return;
     }
-
-    // Initialize UI
+  
     setupTabs();
     loadRooms();
     loadUsers();
     setupForms();
-    }
-
-    function setupTabs() {
-    $('#show-rooms').click(function() {
-        $(this).addClass('active btn-primary').removeClass('btn-secondary');
-        $('#show-users').removeClass('active btn-primary').addClass('btn-secondary');
-        $('#users-section').removeClass('active');
-        $('#rooms-section').addClass('active');
+  }
+  
+  function setupTabs() {
+    const showRoomsBtn = document.getElementById('show-rooms');
+    const showUsersBtn = document.getElementById('show-users');
+    const roomsSection = document.getElementById('rooms-section');
+    const usersSection = document.getElementById('users-section');
+  
+    showRoomsBtn.addEventListener('click', () => {
+      showRoomsBtn.classList.add('active', 'btn-primary');
+      showRoomsBtn.classList.remove('btn-secondary');
+      showUsersBtn.classList.remove('active', 'btn-primary');
+      showUsersBtn.classList.add('btn-secondary');
+      usersSection.classList.remove('active');
+      roomsSection.classList.add('active');
     });
-
-    $('#show-users').click(function() {
-        $(this).addClass('active btn-primary').removeClass('btn-secondary');
-        $('#show-rooms').removeClass('active btn-primary').addClass('btn-secondary');
-        $('#rooms-section').removeClass('active');
-        $('#users-section').addClass('active');
+  
+    showUsersBtn.addEventListener('click', () => {
+      showUsersBtn.classList.add('active', 'btn-primary');
+      showUsersBtn.classList.remove('btn-secondary');
+      showRoomsBtn.classList.remove('active', 'btn-primary');
+      showRoomsBtn.classList.add('btn-secondary');
+      roomsSection.classList.remove('active');
+      usersSection.classList.add('active');
     });
-    }
-
-    function setupForms() {
+  }
+  
+  function setupForms() {
     // Room form
-    $('#add-room-form').submit(function(e) {
-        e.preventDefault();
-        const equipment = Array.from($('input[name="equipment"]:checked')).map(el => el.value);
-        const room = {
-        id: Date.now(),
-        name: $('#room-name').val().trim(),
-        capacity: parseInt($('#room-capacity').val()),
-        equipment: equipment.join(', '),
-        status: 'Available'
-        };
-
-        if (!room.name || isNaN(room.capacity)) {
+    const roomForm = document.getElementById('add-room-form');
+    roomForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const equipment = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(el => el.value);
+      const room = {
+        name: document.getElementById('room-name').value.trim(),
+        capacity: parseInt(document.getElementById('room-capacity').value),
+        feature: equipment.join(', ')
+      };
+  
+      if (!room.name || isNaN(room.capacity)) {
         showToast('Please fill all required fields', 'error');
         return;
-        }
-
-        let rooms = JSON.parse(localStorage.getItem('rooms')) || [];
-        rooms.push(room);
-        localStorage.setItem('rooms', JSON.stringify(rooms));
+      }
+  
+      fetch('/api/rooms', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(room)
+      })
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
+      .then(() => {
         showToast('Room added!', 'success');
-        $(this).trigger('reset');
+        roomForm.reset();
         loadRooms();
+      })
+      .catch(err => {
+        showToast('Failed to add room: ' + (err?.message || 'Unknown error'), 'error');
+      });
     });
-
+  
     // User form
-    $('#add-user-form').submit(function(e) {
-        e.preventDefault();
-        const user = {
-        id: Date.now(),
-        firstName: $('#user-first-name').val().trim(),
-        lastName: $('#user-last-name').val().trim(),
-        email: $('#user-email').val().trim(),
-        password: $('#user-password').val(),
-        role: $('#user-role').val(),
-        source: 'admin-added'
-        };
-
-        if (!user.firstName || !user.lastName || !user.email || !user.password) {
+    const userForm = document.getElementById('add-user-form');
+    userForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const user = {
+        first_name: document.getElementById('user-first-name').value.trim(),
+        last_name: document.getElementById('user-last-name').value.trim(),
+        email: document.getElementById('user-email').value.trim(),
+        password: document.getElementById('user-password').value,
+        role: document.getElementById('user-role').value
+      };
+  
+      if (!user.first_name || !user.last_name || !user.email || !user.password) {
         showToast('Please fill all required fields', 'error');
         return;
-        }
-
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        let adminUsers = JSON.parse(localStorage.getItem('adminUsers')) || [];
-        
-        if ([...users, ...adminUsers].some(u => u.email.toLowerCase() === user.email.toLowerCase())) {
-        showToast('Email already exists!', 'error');
-        return;
-        }
-
-        adminUsers.push(user);
-        localStorage.setItem('adminUsers', JSON.stringify(adminUsers));
+      }
+  
+      fetch('/api/users', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      })
+      .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
+      .then(() => {
         showToast('User added!', 'success');
-        $(this).trigger('reset');
+        userForm.reset();
         loadUsers();
+      })
+      .catch(err => {
+        showToast('Failed to add user: ' + (err?.message || 'Unknown error'), 'error');
+      });
     });
-    }
-
-    function loadRooms() {
-    const rooms = JSON.parse(localStorage.getItem('rooms')) || [];
-    const $table = $('#rooms-table').empty();
-
-    if (rooms.length === 0) {
-        $table.append('<tr><td colspan="4" class="text-center">No rooms yet</td></tr>');
-        return;
-    }
-
-    rooms.forEach(room => {
-        $table.append(`
-        <tr data-id="${room.id}">
+  }
+  
+  function loadRooms() {
+    fetch('/api/rooms', { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(rooms => {
+        const table = document.getElementById('rooms-table');
+        table.innerHTML = '';
+  
+        if (!rooms.length) {
+          table.innerHTML = `<tr><td colspan="4" class="text-center">No rooms yet</td></tr>`;
+          return;
+        }
+  
+        rooms.forEach(room => {
+          const row = document.createElement('tr');
+          row.dataset.id = room.id;
+          row.innerHTML = `
             <td>${room.name}</td>
             <td>${room.capacity}</td>
-            <td>${room.equipment}</td>
-            <td>
-            <button class="btn btn-danger btn-sm delete-room">Delete</button>
-            </td>
-        </tr>
-        `);
-    });
-
-    $('.delete-room').click(function() {
-        const roomId = $(this).closest('tr').data('id');
-        deleteRoom(roomId);
-    });
-    }
-
-    function loadUsers() {
-    const registeredUsers = JSON.parse(localStorage.getItem('users')) || [];
-    const adminUsers = JSON.parse(localStorage.getItem('adminUsers')) || [];
-    const allUsers = registeredUsers.map(u => ({ ...u, source: 'registered' })).concat(adminUsers);
-    const $table = $('#users-table').empty();
-
-    if (allUsers.length === 0) {
-        $table.append('<tr><td colspan="4" class="text-center">No users yet</td></tr>');
-        return;
-    }
-
-    allUsers.forEach(user => {
-        $table.append(`
-        <tr data-id="${user.id}" data-source="${user.source}">
-            <td>${user.firstName} ${user.lastName}</td>
+            <td>${room.feature || ''}</td>
+            <td><button class="btn btn-danger btn-sm delete-room">Delete</button></td>
+          `;
+          table.appendChild(row);
+  
+          row.querySelector('.delete-room').addEventListener('click', () => {
+            deleteRoom(room.id);
+          });
+        });
+      })
+      .catch(() => {
+        document.getElementById('rooms-table').innerHTML = '<tr><td colspan="4" class="text-center">Failed to load rooms</td></tr>';
+      });
+  }
+  
+  function loadUsers() {
+    fetch('/api/users', { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(response => {
+        const users = response.data || response;
+        const table = document.getElementById('users-table');
+        table.innerHTML = '';
+  
+        if (!users.length) {
+          table.innerHTML = `<tr><td colspan="4" class="text-center">No users yet</td></tr>`;
+          return;
+        }
+  
+        users.forEach(user => {
+          const row = document.createElement('tr');
+          row.dataset.id = user.id;
+          row.innerHTML = `
+            <td>${user.first_name} ${user.last_name}</td>
             <td>${user.email}</td>
             <td>${user.role || 'user'}</td>
-            <td>
-            <button class="btn btn-danger btn-sm delete-user">Delete</button>
-            </td>
-        </tr>
-        `);
-    });
-
-    $('.delete-user').click(function() {
-        const $row = $(this).closest('tr');
-        deleteUser($row.data('id'), $row.data('source'));
-    });
-    }
-
-    function deleteRoom(roomId) {
+            <td><button class="btn btn-danger btn-sm delete-user">Delete</button></td>
+          `;
+          table.appendChild(row);
+  
+          row.querySelector('.delete-user').addEventListener('click', () => {
+            deleteUser(user.id);
+          });
+        });
+      })
+      .catch(() => {
+        document.getElementById('users-table').innerHTML = '<tr><td colspan="4" class="text-center">Failed to load users</td></tr>';
+      });
+  }
+  
+  function deleteRoom(roomId) {
     showModal({
-        title: 'Delete Room',
-        message: 'Are you sure? This will cancel all meetings in this room.',
-        onConfirm: () => {
-        let rooms = JSON.parse(localStorage.getItem('rooms')) || [];
-        rooms = rooms.filter(r => r.id !== roomId);
-        localStorage.setItem('rooms', JSON.stringify(rooms));
-
-        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-        meetings = meetings.filter(m => m.room != roomId);
-        localStorage.setItem('meetings', JSON.stringify(meetings));
-
-        showToast('Room deleted!', 'success');
-        loadRooms();
-        },
-        showCancel: true
+      title: 'Delete Room',
+      message: 'Are you sure? This will cancel all meetings in this room.',
+      onConfirm: () => {
+        fetch(`/api/rooms/${roomId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        })
+        .then(res => {
+          if (!res.ok) return res.json().then(err => Promise.reject(err));
+          showToast('Room deleted!', 'success');
+          loadRooms();
+        })
+        .catch(err => {
+          showToast('Failed to delete room: ' + (err?.message || 'Unknown error'), 'error');
+        });
+      },
+      showCancel: true
     });
-    }
-
-    function deleteUser(userId, source) {
+  }
+  
+  function deleteUser(userId) {
+    const currentUser = getCurrentUser();
     if (currentUser.id === userId) {
-        showToast("Can't delete your own account!", 'error');
-        return;
+      showToast("Can't delete your own account!", 'error');
+      return;
     }
-
+  
     showModal({
-        title: 'Delete User',
-        message: 'Are you sure? This will cancel all their meetings.',
-        onConfirm: () => {
-        if (source === 'registered') {
-            let users = JSON.parse(localStorage.getItem('users')) || [];
-            users = users.filter(u => u.id !== userId);
-            localStorage.setItem('users', JSON.stringify(users));
-        } else {
-            let adminUsers = JSON.parse(localStorage.getItem('adminUsers')) || [];
-            adminUsers = adminUsers.filter(u => u.id !== userId);
-            localStorage.setItem('adminUsers', JSON.stringify(adminUsers));
-        }
-
-        showToast('User deleted!', 'success');
-        loadUsers();
-        },
-        showCancel: true
+      title: 'Delete User',
+      message: 'Are you sure? This will cancel all their meetings.',
+      onConfirm: () => {
+        fetch(`/api/users/${userId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        })
+        .then(res => {
+          if (!res.ok) return res.json().then(err => Promise.reject(err));
+          showToast('User deleted!', 'success');
+          loadUsers();
+        })
+        .catch(err => {
+          showToast('Failed to delete user: ' + (err?.message || 'Unknown error'), 'error');
+        });
+      },
+      showCancel: true
     });
-    }
+  }
+  
+  function getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return token ? { 'Authorization': 'Bearer ' + token } : {};
+  }
+  
+  function getCurrentUser() {
+    const user = localStorage.getItem('currentUser');
+    return user ? JSON.parse(user) : null;
+  }
+  
+  document.addEventListener('DOMContentLoaded', initAdmin);
+  

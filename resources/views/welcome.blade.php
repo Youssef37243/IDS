@@ -12,7 +12,7 @@
   <header role="banner">
     <div class="container header-container">
       <div class="logo">
-        <img src="images/logo.png" alt="Smart Meeting Room Logo">
+        <img src="{{ asset('images/logo.png') }}" alt="Smart Meeting Room Logo">
         <h1>Smart Meeting Room</h1>
       </div>
     </div>
@@ -47,7 +47,6 @@
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
   <div id="modal-container"></div>
 
-  <script src="{{ asset('js/jquery-3.6.0.min.js') }}"></script>
   <script src="{{ asset('js/login.js') }}"></script>
 </body>
 </html>

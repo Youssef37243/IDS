@@ -634,3 +634,77 @@ nav ul li a:hover {
   }
 }
 
+/* Modal overlay and content styles */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  justify-content: center;
+  align-items: center;
+}
+.modal.show {
+  display: flex;
+}
+.modal-content {
+  background: #fff;
+  margin: auto;
+  padding: 2rem 2.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  text-align: center;
+  animation: modalFadeIn 0.2s;
+}
+@keyframes modalFadeIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-content h2 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  color: #222;
+}
+.modal-content p {
+  margin: 1.2rem 0 2rem 0;
+  color: #444;
+}
+.modal-content .btn {
+  min-width: 90px;
+  margin-left: 0.5rem;
+}
+.close {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.close:hover {
+  color: #e74c3c;
+}
+
+/* Fix for select dropdown visibility */
+select.form-control {
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+  -moz-appearance: auto !important;
+  pointer-events: auto !important;
+  background: #fff;
+  color: #222;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  min-width: 120px;
+  z-index: 10;
+}
+
