@@ -16,8 +16,8 @@
         <h2>Quick Actions</h2>
       </div>
       <div class="quick-actions">
-        <button id="schedule-meeting" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Schedule Meeting</button>
-        <button id="view-minutes" class="btn btn-secondary"><i class="fas fa-file-alt"></i> View Minutes</button>
+        <button id="schedule-meeting" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Schedule Meetinteg</button>
+        <button id="view-minutes" class="btn btn-secondary"><i class="fas fa-file-alt"></i> View Minus</button>
       </div>
     </div>
 
@@ -29,8 +29,8 @@
     </div>
   </main>
 
+  <script src="{{ asset('js/dash.js') }}"></script>
   <script src="{{ asset('js/script.js') }}"></script>
-  <script src="{{ asset('js/dashboard.js') }}"></script>
   <script src="{{ asset('js/header.js') }}"></script>
 
 </body>

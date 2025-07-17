@@ -36,10 +36,14 @@ function initAdmin() {
     });
   }
   
+  let roomFormInitialized = false;
+
   function setupForms() {
-    // Room form
     const roomForm = document.getElementById('add-room-form');
+    if (!roomFormInitialized && roomForm) {
+      roomFormInitialized = true;
     roomForm.addEventListener('submit', e => {
+      console.log('Room form submitted');
       e.preventDefault();
       const equipment = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(el => el.value);
       const room = {
@@ -102,6 +106,7 @@ function initAdmin() {
       });
     });
   }
+}
   
   function loadRooms() {
     fetch('/api/rooms', { headers: getAuthHeaders() })

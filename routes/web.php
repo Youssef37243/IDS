@@ -5,11 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        if (auth()->user()->role === 'admin') {
-            return redirect('/admin');
-        } elseif (auth()->user()->role === 'guest') {
-            return redirect('/guest-dashboard');
-        }
+
         return redirect('/dashboard');
     }
     return view('welcome');
@@ -38,9 +34,6 @@ Route::get('/', function () {
     })->name('profile');
 
     Route::get('/admin', function () {
-        if (auth()->user()->role !== 'admin') {
-            return redirect('/dashboard');
-        }
         return view('admin');
     })->name('admin');
 
@@ -55,12 +48,16 @@ Route::get('/', function () {
 
 Route::get('/login', function () {
     if (auth()->check()) {
-        if (auth()->user()->role === 'admin') {
+        if (auth()->user() === 'admin') {
             return redirect('/admin');
-        } elseif (auth()->user()->role === 'guest') {
+        } elseif (auth()->user() === 'guest') {
             return redirect('/guest-dashboard');
         }
         return redirect('/dashboard');
     }
     return view('welcome');
 })->name('login');
+
+Route::get('/header', function () {
+    return view('header');
+})->name('header');

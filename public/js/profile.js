@@ -82,3 +82,17 @@ function getAuthHeaders() {
   const token = localStorage.getItem('token');
   return token ? { 'Authorization': 'Bearer ' + token } : {};
 }
+
+document.querySelectorAll('.toggle-password').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+      const input = document.getElementById(toggle.dataset.target);
+      const showIcon = toggle.querySelector('.eye-icon.show');
+      const hideIcon = toggle.querySelector('.eye-icon.hide');
+
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+
+      showIcon.style.display = isPassword ? 'none' : 'inline';
+      hideIcon.style.display = isPassword ? 'inline' : 'none';
+    });
+  });

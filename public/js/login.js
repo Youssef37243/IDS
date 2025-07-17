@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('User role:', role);
   
           if (role === 'admin') {
-            redirectWithFallback('/admin');
+            redirectWithFallback('/dashboard');
           } else if (role === 'guest') {
             redirectWithFallback('/guest-dashboard');
           } else {

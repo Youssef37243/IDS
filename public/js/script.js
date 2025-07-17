@@ -52,6 +52,7 @@ function getCurrentUser() {
 
 function updateUIForUser() {
   currentUser = getCurrentUser();
+  console.log(currentUser)
   const authOnly = document.querySelectorAll('.auth-only');
   const guestOnly = document.querySelectorAll('.guest-only');
   const adminOnly = document.querySelectorAll('.admin-only');
@@ -59,7 +60,7 @@ function updateUIForUser() {
   if (currentUser) {
     authOnly.forEach(el => el.style.display = 'block');
     guestOnly.forEach(el => el.style.display = 'none');
-    if (currentUser.role === 'admin') {
+    if (currentUser.role == 'admin') {
       adminOnly.forEach(el => el.style.display = 'block');
     } else {
       adminOnly.forEach(el => el.style.display = 'none');
@@ -67,7 +68,7 @@ function updateUIForUser() {
     const userName = document.getElementById('user-name');
     const userRole = document.getElementById('user-role');
     if (userName) userName.textContent = `${currentUser.first_name} ${currentUser.last_name}`;
-    if (userRole) userRole.textContent = currentUser.role;
+   
   } else {
     authOnly.forEach(el => el.style.display = 'none');
     guestOnly.forEach(el => el.style.display = 'block');
@@ -144,3 +145,4 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initReview === 'function') initReview();
   if (typeof initAdmin === 'function') initAdmin();
 });
+

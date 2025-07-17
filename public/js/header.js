@@ -11,7 +11,7 @@ fetch('/api/profile', {
   .catch(() => renderHeader(null));
 
 function renderHeader(currentUser) {
-  fetch('header.html')
+  fetch('/header')
     .then(response => response.text())
     .then(html => {
       document.getElementById('header').innerHTML = html;

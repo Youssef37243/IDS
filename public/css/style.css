@@ -9,6 +9,7 @@
   --warning-color: #f39c12;
   --danger-color: #e74c3c;
   --gray-color: #95a5a6;
+  --lighter-color: hsl(200, 29%, 24%);
 }
 
 * {
@@ -57,6 +58,10 @@ header {
 
 .logo h1 {
   font-size: 1.5rem;
+}
+
+nav {
+  display: block;
 }
 
 nav ul {
@@ -583,14 +588,14 @@ nav ul li a:hover {
   margin-left: 10px;
 }
 /* Burger Menu Styling */
-.burger {
+#burger {
   display: none;
   font-size: 1.8rem;
   cursor: pointer;
-  color: white;
+  color: white !important;
 }
 
-@media (max-width: 1010px) {
+@media (max-width: 950px) {
   nav {
     display: none;
     position: absolute;
@@ -611,7 +616,7 @@ nav ul li a:hover {
     margin: 10px 0;
   }
 
-  .burger {
+  #burger {
     display: block;
   }
 
@@ -620,18 +625,12 @@ nav ul li a:hover {
   }
 
   .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
-  }
-}
+  }  
 
-@media (max-width: 1010px) {
-  nav ul li a.clicked {
-    background-color: red!important;
-    color: #fff !important;
-    padding: 8px 12px;
-    border-radius: 5px;
-    display: inline-block;
-  }
 }
 
 /* Modal overlay and content styles */
@@ -708,3 +707,23 @@ select.form-control {
   z-index: 10;
 }
 
+.form-group {
+  position: relative;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 36px;
+  cursor: pointer;
+}
+
+.eye-icon {
+  width: 20px;
+  height: 20px;
+  color: #888;
+}
+
+.eye-icon.hide {
+  display: none;
+}
