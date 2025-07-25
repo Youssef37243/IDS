@@ -1313,3 +1313,23 @@ body.modal-open {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Back to Dashboard button styles */
+.back-to-dashboard {
+  margin-bottom: 20px;
+}
+
+.back-to-dashboard .btn{
+  background-color: var(--primary-color);
+}
+
+.back-to-dashboard a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.back-to-dashboard a i {
+  font-size: 0.9em;
+}

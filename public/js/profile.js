@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return res.json();
     })
     .then(response => {
+      console.log('API response:', response); // Add this
       if (!response || !response.user) throw new Error('Invalid user data');
       
       currentUser = response.user;
@@ -63,10 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const newPassword = getInputValue('profile-password-new');
 
         // Prepare update data
-        const updateData = {};
-        if (newFirstName !== null) updateData.first_name = newFirstName;
-        if (newLastName !== null) updateData.last_name = newLastName;
-        if (newEmail !== null) updateData.email = newEmail;
+        const updateData = {
+          first_name: newFirstName || currentUser.first_name,
+          last_name: newLastName || currentUser.last_name,
+          email: newEmail || currentUser.email
+      };
 
         // Handle password change
         if (oldPassword || newPassword) {
@@ -78,20 +80,40 @@ document.addEventListener('DOMContentLoaded', () => {
           updateData.password_confirmation = newPassword;
         }
 
+        console.log('First Name:', newFirstName);
+        console.log('Last Name:', newLastName);
+        console.log('Email:', newEmail);
+        console.log('Old Password:', oldPassword);
+        console.log('New Password:', newPassword);
+
+        console.log('Setting values:', {
+          firstName: currentUser.first_name,
+          lastName: currentUser.last_name,
+          email: currentUser.email
+        });
+
+        console.log('Current form values:', {
+  firstName: document.getElementById('profile-first-name').value,
+  lastName: document.getElementById('profile-last-name').value,
+  email: document.getElementById('profile-email').value
+});
+        
         console.log('Submitting update:', updateData); // Debug log
 
-        // Verify we have changes to save
-        if (Object.keys(updateData).length === 0) {
-          showToast('No changes to save', 'info');
-          return;
-        }
+       // Now check if anything actually changed
+const hasChanges = Object.keys(updateData).some(key => {
+  return updateData[key] !== currentUser[key];
+});
+
+if (!hasChanges) {
+  showToast('No changes to save', 'info');
+  return;
+}
 
         // Verify user session
         if (!currentUser?.id) {
           throw new Error('Session expired. Please login again.');
         }
-
-        console.log('Submitting update:', updateData); // Debug log
 
         // Send update request
         const response = await fetch(`/api/users/${currentUser.id}`, {

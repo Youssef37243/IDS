@@ -9,12 +9,20 @@
 <body id="profile-page">
   <div id="header"></div>
   <main class="container">
+    <div class="back-to-dashboard">
+              <a href="/dashboard" class="btn btn-secondary">
+                Back to Dashboard
+              </a>
+            </div>
+
     <div class="card profile-card">
+      
       <div class="card-header">
         <h2><i class="fas fa-user"></i> My Profile</h2>
       </div>
       <div class="card-body">
         <form id="profile-form">
+          
           <div class="form-group">
             <label for="profile-first-name">First Name</label>
             <input type="text" id="profile-first-name" class="form-control" required>
@@ -54,6 +62,7 @@
 </div>
 
           <button type="submit" class="btn btn-primary" id="save-changes-btn">Save Changes</button>
+            
         </form>
       </div>
     </div>
@@ -61,7 +70,6 @@
 
   <script src="{{ asset('js/script.js') }}"></script>
   <script src="{{ asset('js/profile.js') }}"></script>
-  <script src="{{ asset('js/header.js') }}"></script>
   
 </body>
 </html> 

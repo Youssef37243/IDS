@@ -20,16 +20,19 @@ function renderHeader(currentUser) {
         const burger = document.getElementById('burger');
         const nav = document.getElementById('nav');
 
-        if (currentUser && currentUser.role === 'user') {
-          // Remove admin-only <li>
-          const adminLi = nav?.querySelector('.admin-only');
-          if (adminLi) adminLi.remove();
+        if (currentUser) {
+          // Remove admin-only <li> if user is not admin
+          if (currentUser.role !== 'admin') {
+            const adminLi = nav?.querySelector('.admin-only');
+            if (adminLi) adminLi.remove();
+          }
 
-          // Insert Profile link before Logout
+          // Insert Profile link before Logout for ALL authenticated users
           const logoutBtn = document.getElementById('logout-btn');
           const logoutLi = logoutBtn?.closest('li');
           if (logoutLi) {
             const profileLi = document.createElement('li');
+            profileLi.className = 'auth-only'; // Add auth-only class
             profileLi.innerHTML = `<a href="#" id="profile-link"><i class="fas fa-user"></i> Profile</a>`;
             logoutLi.parentNode.insertBefore(profileLi, logoutLi);
           }
@@ -92,8 +95,8 @@ function renderHeader(currentUser) {
           }
         }
 
-        // Profile redirection
-        if (currentUser?.role === 'user') {
+        // Profile redirection for ALL authenticated users
+        if (currentUser) {
           const profileLink = document.getElementById('profile-link');
           if (profileLink) {
             profileLink.addEventListener('click', function (e) {

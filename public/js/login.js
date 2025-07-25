@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Login success:', data);
                   // After successful login
 localStorage.setItem('currentUser', JSON.stringify(response.user));
-localStorage.setItem('token', response.token); // Don't forget the token
+
   
         if (data.token) {
           localStorage.setItem('token', data.token);

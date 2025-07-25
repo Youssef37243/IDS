@@ -89,9 +89,9 @@ function showToast(message, type = "success") {
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
     <i class="fas fa-${type === 'success' ? 'check-circle' : 
-                     type === 'error' ? 'exclamation-circle' : 
-                     'info-circle'}"></i>
-    ${message}
+                      type === 'error' ? 'exclamation-circle' : 
+                      'info-circle'}"></i>
+      ${message}
   `;
   document.body.appendChild(toast);
   setTimeout(() => document.body.removeChild(toast), 3000);
