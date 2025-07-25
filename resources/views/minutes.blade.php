@@ -13,7 +13,7 @@
   <main class="container">
     <div class="card">
       <div class="card-header">
-        <h2>Meeting Minutes: <span id="minutes-title">Project Kickoff</span></h2>
+        <h2>Meeting Minutes: <span id="minutes-title"></span></h2>
       </div>
       
       <form id="minutes-form">
@@ -25,18 +25,16 @@
         <div class="form-group">
           <label for="minutes-attendees">Attendees</label>
           <select id="minutes-attendees" class="form-control" multiple>
-            <option value="1" selected>John Doe</option>
-            <option value="2" selected>Jane Smith</option>
-            <option value="3">Mike Johnson</option>
+            Loading...
           </select>
           <small>Hold Ctrl/Cmd to select multiple</small>
         </div>
         
         <div class="form-group">
           <label for="minutes-agenda">Agenda</label>
-          <textarea id="minutes-agenda" class="form-control" rows="3">1. Project overview
-2. Team introductions
-3. Next steps</textarea>
+          <textarea id="minutes-agenda" class="form-control" rows="3">
+            Loading...
+          </textarea>
         </div>
         
         <div class="form-group">
@@ -67,9 +65,7 @@
                 <td><input type="text" class="form-control" value="Prepare requirements document"></td>
                 <td>
                   <select class="form-control">
-                    <option value="1">John Doe</option>
-                    <option value="2" selected>Jane Smith</option>
-                    <option value="3">Mike Johnson</option>
+
                   </select>
                 </td>
                 <td><input type="date" class="form-control" value="2023-06-20"></td>

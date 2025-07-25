@@ -1,3 +1,72 @@
+// Add these at the top of your admin.js
+let currentModalCallback = null;
+
+function initModal() {
+  const modal = document.getElementById('confirmation-modal');
+  if (!modal) return;
+
+  // Close modal when clicking X
+  document.getElementById('close-confirmation-modal').addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // Close modal when clicking Cancel
+  document.getElementById('cancel-confirmation').addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // Handle confirm action
+  document.getElementById('confirm-action').addEventListener('click', () => {
+    modal.style.display = 'none';
+    if (currentModalCallback) {
+      currentModalCallback();
+      currentModalCallback = null;
+    }
+  });
+
+  // Close when clicking outside modal
+  window.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+function showModal(options) {
+  const modal = document.getElementById('confirmation-modal');
+  if (!modal) {
+    // Fallback to browser confirm if modal doesn't exist
+    if (confirm(options.message)) {
+      options.onConfirm();
+    }
+    return;
+  }
+
+  // Set modal content
+  document.getElementById('confirmation-title').textContent = options.title;
+  document.getElementById('confirmation-message').textContent = options.message;
+  
+  // Update confirm button text if provided
+  if (options.confirmText) {
+    document.getElementById('confirm-action').textContent = options.confirmText;
+  } else {
+    document.getElementById('confirm-action').textContent = 'Delete';
+  }
+
+  // Store the callback
+  currentModalCallback = options.onConfirm;
+
+  // Show modal
+  modal.style.display = 'block';
+}
+
+// Initialize the modal when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  initModal();
+  initAdmin(); // Make sure this comes after initModal
+});
+
+
 function initAdmin() {
     const currentUser = getCurrentUser();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -45,14 +114,16 @@ function initAdmin() {
     roomForm.addEventListener('submit', e => {
       console.log('Room form submitted');
       e.preventDefault();
+      // In setupForms() function, modify the room object creation:
       const equipment = Array.from(document.querySelectorAll('input[name="equipment"]:checked')).map(el => el.value);
       const room = {
         name: document.getElementById('room-name').value.trim(),
         capacity: parseInt(document.getElementById('room-capacity').value),
-        feature: equipment.join(', ')
+        location: document.getElementById('room-location').value.trim(),
+        feature: equipment.length > 0 ? equipment.join(', ') : 'None' // This ensures 'None' is stored if no equipment checked
       };
   
-      if (!room.name || isNaN(room.capacity)) {
+      if (!room.name || isNaN(room.capacity) || !room.location) {
         showToast('Please fill all required fields', 'error');
         return;
       }
@@ -102,44 +173,45 @@ function initAdmin() {
         loadUsers();
       })
       .catch(err => {
-        showToast('Failed to add user: ' + (err?.message || 'Unknown error'), 'error');
-      });
+        showToast('Failed to add user: ' + "Password must be at least 8 characters long or Email Used", 'error');
+      }, 10000);
     });
   }
 }
   
   function loadRooms() {
-    fetch('/api/rooms', { headers: getAuthHeaders() })
-      .then(res => res.json())
-      .then(rooms => {
-        const table = document.getElementById('rooms-table');
-        table.innerHTML = '';
-  
-        if (!rooms.length) {
-          table.innerHTML = `<tr><td colspan="4" class="text-center">No rooms yet</td></tr>`;
-          return;
-        }
-  
-        rooms.forEach(room => {
-          const row = document.createElement('tr');
-          row.dataset.id = room.id;
-          row.innerHTML = `
-            <td>${room.name}</td>
-            <td>${room.capacity}</td>
-            <td>${room.feature || ''}</td>
-            <td><button class="btn btn-danger btn-sm delete-room">Delete</button></td>
-          `;
-          table.appendChild(row);
-  
-          row.querySelector('.delete-room').addEventListener('click', () => {
-            deleteRoom(room.id);
-          });
+  fetch('/api/rooms', { headers: getAuthHeaders() })
+    .then(res => res.json())
+    .then(rooms => {
+      const table = document.getElementById('rooms-table');
+      table.innerHTML = '';
+
+      if (!rooms.length) {
+        table.innerHTML = `<tr><td colspan="5" class="text-center">No rooms yet</td></tr>`;
+        return;
+      }
+
+      rooms.forEach(room => {
+        const row = document.createElement('tr');
+        row.dataset.id = room.id;
+        row.innerHTML = `
+          <td>${room.name}</td>
+          <td>${room.capacity}</td>
+          <td>${room.location}</td>
+          <td>${room.feature || 'None'}</td> <!-- Display 'None' if feature is empty -->
+          <td><button class="btn btn-danger btn-sm delete-room">Delete</button></td>
+        `;
+        table.appendChild(row);
+
+        row.querySelector('.delete-room').addEventListener('click', () => {
+          deleteRoom(room.id);
         });
-      })
-      .catch(() => {
-        document.getElementById('rooms-table').innerHTML = '<tr><td colspan="4" class="text-center">Failed to load rooms</td></tr>';
       });
-  }
+    })
+    .catch(() => {
+      document.getElementById('rooms-table').innerHTML = '<tr><td colspan="5" class="text-center">Failed to load rooms</td></tr>';
+    });
+}
   
   function loadUsers() {
     fetch('/api/users', { headers: getAuthHeaders() })
@@ -175,55 +247,53 @@ function initAdmin() {
       });
   }
   
-  function deleteRoom(roomId) {
-    showModal({
-      title: 'Delete Room',
-      message: 'Are you sure? This will cancel all meetings in this room.',
-      onConfirm: () => {
-        fetch(`/api/rooms/${roomId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders()
-        })
-        .then(res => {
-          if (!res.ok) return res.json().then(err => Promise.reject(err));
-          showToast('Room deleted!', 'success');
-          loadRooms();
-        })
-        .catch(err => {
-          showToast('Failed to delete room: ' + (err?.message || 'Unknown error'), 'error');
-        });
-      },
-      showCancel: true
-    });
-  }
-  
-  function deleteUser(userId) {
-    const currentUser = getCurrentUser();
-    if (currentUser.id === userId) {
-      showToast("Can't delete your own account!", 'error');
-      return;
+function deleteRoom(roomId) {
+  showModal({
+    title: 'Delete Room',
+    message: 'Are you sure? This will cancel all meetings in this room.',
+    onConfirm: () => {
+      fetch(`/api/rooms/${roomId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      .then(res => {
+        if (!res.ok) return res.json().then(err => Promise.reject(err));
+        showToast('Room deleted!', 'success');
+        loadRooms();
+      })
+      .catch(err => {
+        showToast('Failed to delete room: ' + (err?.message || 'Unknown error'), 'error');
+      });
     }
-  
-    showModal({
-      title: 'Delete User',
-      message: 'Are you sure? This will cancel all their meetings.',
-      onConfirm: () => {
-        fetch(`/api/users/${userId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders()
-        })
-        .then(res => {
-          if (!res.ok) return res.json().then(err => Promise.reject(err));
-          showToast('User deleted!', 'success');
-          loadUsers();
-        })
-        .catch(err => {
-          showToast('Failed to delete user: ' + (err?.message || 'Unknown error'), 'error');
-        });
-      },
-      showCancel: true
-    });
+  });
+}
+
+function deleteUser(userId) {
+  const currentUser = getCurrentUser();
+  if (currentUser.id === userId) {
+    showToast("Can't delete your own account!", 'error');
+    return;
   }
+
+  showModal({
+    title: 'Delete User',
+    message: 'Are you sure? This will cancel all their meetings.',
+    onConfirm: () => {
+      fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+      .then(res => {
+        if (!res.ok) return res.json().then(err => Promise.reject(err));
+        showToast('User deleted!', 'success');
+        loadUsers();
+      })
+      .catch(err => {
+        showToast('Failed to delete user: ' + (err?.message || 'Unknown error'), 'error');
+      });
+    }
+  });
+}
   
   function getAuthHeaders() {
     const token = localStorage.getItem('token');

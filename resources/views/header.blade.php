@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <header>
@@ -33,7 +32,7 @@
 </div>
 </header>
 <!-- Profile Modal -->
-<div id="profile-modal" class="modal" style="display:none;">
+<div id="profile-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close" id="close-profile-modal">&times;</span>
     <h2>User Profile</h2>
@@ -48,12 +47,12 @@
   </div>
 </div>
 <!-- Logout Confirmation Modal -->
-<div id="logout-modal" class="modal" style="display:none;">
+<div id="logout-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close" id="close-logout-modal">&times;</span>
     <h2>Confirm Logout</h2>
     <p>Are you sure you want to logout?</p>
-    <div style="text-align:right;">
+    <div class="text-right">
       <button id="cancel-logout" class="btn btn-secondary">Cancel</button>
       <button id="confirm-logout" class="btn btn-danger">Logout</button>
     </div>

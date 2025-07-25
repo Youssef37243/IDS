@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Meeting Room - Active Meeting</title>
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body id="active-meeting-page">
   <header>
@@ -30,14 +29,17 @@
   <main class="container">
     <div class="card">
       <div class="card-header">
-        <h2>Active Meeting: <span id="meeting-title">Project Kickoff</span></h2>
+        <h2>Active Meeting: <span id="meeting-title">Loading...</span></h2>
+        <button id="view-meeting-details" class="btn btn-secondary">
+          <i class="fas fa-info-circle"></i> Meeting Details
+        </button>
       </div>
       
       <div class="meeting-info">
         <div class="meeting-details">
-          <p><strong>Time:</strong> <span id="meeting-time">June 15, 2023 10:00 AM - 11:00 AM</span></p>
-          <p><strong>Room:</strong> <span id="meeting-room">Conference Room A</span></p>
-          <p><strong>Attendees:</strong> <span id="meeting-attendees">John Doe, Jane Smith, Mike Johnson</span></p>
+          <p><strong>Time:</strong> <span id="meeting-time">Loading...</span></p>
+          <p><strong>Room:</strong> <span id="meeting-room">Loading...</span></p>
+          <p><strong>Attendees:</strong> <span id="meeting-attendees">Loading...</span></p>
         </div>
         
         <div class="meeting-timer">
@@ -55,7 +57,7 @@
         <button id="take-notes" class="btn btn-secondary"><i class="fas fa-edit"></i> Take Notes</button>
         <button id="share-screen" class="btn btn-secondary"><i class="fas fa-desktop"></i> Share Screen</button>
         <button id="invite-participant" class="btn btn-secondary"><i class="fas fa-user-plus"></i> Invite Participant</button>
-        <a href="#" class="btn btn-success"><i class="fas fa-video"></i> Join Video Call</a>
+        <button id="join-video" class="btn btn-success"><i class="fas fa-video"></i> Join Video Call</button>
       </div>
       
       <div class="transcription-section">
@@ -73,6 +75,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Add this before the closing </body> tag -->
+<div id="modal-container">
+  <!-- Confirmation Modal -->
+  <div id="confirmation-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal-btn">&times;</span>
+      <h2 id="modal-title"></h2>
+      <div id="modal-body"></div>
+      <div class="modal-footer">
+        <div id="modal-input-container" style="display: none; margin-bottom: 15px;">
+          <input type="text" id="modal-input" class="form-control" placeholder="">
+        </div>
+        <div class="modal-buttons">
+          <button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+          <button id="modal-confirm-btn" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   </main>
 
   <script src="{{ asset('js/script.js') }}"></script>

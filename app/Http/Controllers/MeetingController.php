@@ -10,7 +10,14 @@ class MeetingController extends Controller
 {
     public function index()
     {
-        return Meeting::with(['room', 'user', 'attendees'])->get();
+        $meetings = Meeting::with(['room', 'user', 'attendees'])->get();
+        // Transform attendees to array of user IDs
+        $meetings->transform(function ($meeting) {
+            $meetingArray = $meeting->toArray();
+            $meetingArray['attendees'] = collect($meeting->attendees)->pluck('user_id')->toArray();
+            return $meetingArray;
+        });
+        return response()->json($meetings);
     }
 
     public function store(Request $request)
@@ -21,16 +28,37 @@ class MeetingController extends Controller
             'start_time' => 'required|date',
             'end_time' => 'required|date|after:start_time',
             'title' => 'required|string|max:255',
-            'agenda' => 'nullable|string'
+            'agenda' => 'nullable|string',
+            'attendees' => 'nullable|array',
+            'attendees.*' => 'exists:users,id',
         ]);
 
+        $attendees = $validated['attendees'] ?? [];
+        unset($validated['attendees']);
+
         $meeting = Meeting::create($validated);
-        return response()->json($meeting, 201);
+
+        // Create attendee records
+        foreach ($attendees as $attendeeId) {
+            \App\Models\Attendee::firstOrCreate([
+                'user_id' => $attendeeId,
+                'meeting_id' => $meeting->id
+            ]);
+        }
+
+        // Transform attendees to array of user IDs
+        $meeting = $meeting->load(['room', 'user', 'attendees']);
+        $meetingArray = $meeting->toArray();
+        $meetingArray['attendees'] = collect($meeting->attendees)->pluck('user_id')->toArray();
+        return response()->json($meetingArray, 201);
     }
 
     public function show(Meeting $meeting)
     {
-        return $meeting->load(['room', 'user', 'attendees']);
+        $meeting = $meeting->load(['room', 'user', 'attendees']);
+        $meetingArray = $meeting->toArray();
+        $meetingArray['attendees'] = collect($meeting->attendees)->pluck('user_id')->toArray();
+        return response()->json($meetingArray);
     }
 
     public function update(Request $request, Meeting $meeting)

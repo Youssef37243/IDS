@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Meeting Room - Dashboard</title>
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body id="dashboard-page">
     <div id="header"></div>
@@ -27,10 +26,21 @@
       </div>
       <div id="upcoming-meetings"></div>
     </div>
+
+    <!-- Add this to your dashboard HTML -->
+<div id="confirmation-modal" class="modal hidden">
+  <div class="modal-content">
+    <h2 id="confirmation-title">Confirm Action</h2>
+    <p id="confirmation-message">Are you sure you want to perform this action?</p>
+    <div class="modal-actions">
+      <button id="cancel-confirmation" class="btn btn-secondary">Cancel</button>
+      <button id="confirm-action" class="btn btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
   </main>
 
   <script src="{{ asset('js/dash.js') }}"></script>
-  <script src="{{ asset('js/script.js') }}"></script>
   <script src="{{ asset('js/header.js') }}"></script>
 
 </body>

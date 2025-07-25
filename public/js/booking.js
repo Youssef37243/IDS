@@ -69,7 +69,7 @@ function loadRooms() {
       rooms.forEach(room => {
         const option = document.createElement('option');
         option.value = room.id;
-        option.textContent = `${room.name} (Capacity: ${room.capacity})`;
+        option.textContent = `${room.name} (Capacity: ${room.capacity}) (Location: ${room.location})`;
         roomSelect.appendChild(option);
       });
     })
@@ -85,17 +85,34 @@ function loadRooms() {
 }
 
 function loadAttendees() {
+  const attendeesSelect = document.getElementById('attendees');
+  if (!attendeesSelect) return;
+  
+  // Show loading state
+  attendeesSelect.innerHTML = '';
+  const loadingOption = document.createElement('option');
+  loadingOption.value = '';
+  loadingOption.disabled = true;
+  loadingOption.textContent = 'Loading attendees...';
+  attendeesSelect.appendChild(loadingOption);
+
   fetch('/api/users', { headers: getAuthHeaders() })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to load attendees');
+      return res.json();
+    })
     .then(users => {
-      const attendeesSelect = document.getElementById('attendees');
-      if (!attendeesSelect) return;
-
-      attendeesSelect.innerHTML = '';
+      attendeesSelect.innerHTML = ''; // Clear loading state
+      
       const currentUser = getCurrentUser();
-      const otherUsers = users.data ? users.data.filter(u => currentUser && u.id !== currentUser.id) : [];
+      if (!currentUser || !currentUser.id) {
+        throw new Error('Current user information not available');
+      }
 
-      if (!otherUsers.length) {
+      // Filter out the current user
+      const otherUsers = users.filter(user => user.id != currentUser.id);
+
+      if (otherUsers.length === 0) {
         const option = document.createElement('option');
         option.value = '';
         option.disabled = true;
@@ -104,21 +121,28 @@ function loadAttendees() {
         return;
       }
 
+      // Add all other users as options
       otherUsers.forEach(user => {
         const option = document.createElement('option');
         option.value = user.id;
         option.textContent = `${user.first_name} ${user.last_name} (${user.email})`;
         attendeesSelect.appendChild(option);
       });
+
+      // If editing a meeting, restore selected attendees
+      const meetingId = new URLSearchParams(window.location.search).get('edit');
+      if (meetingId) {
+        loadMeetingData(meetingId);
+      }
     })
-    .catch(() => {
-      const attendeesSelect = document.getElementById('attendees');
-      if (!attendeesSelect) return;
-      const option = document.createElement('option');
-      option.value = '';
-      option.disabled = true;
-      option.textContent = 'Error loading users';
-      attendeesSelect.appendChild(option);
+    .catch(err => {
+      console.error('Error loading attendees:', err);
+      attendeesSelect.innerHTML = '';
+      const errorOption = document.createElement('option');
+      errorOption.value = '';
+      errorOption.disabled = true;
+      errorOption.textContent = 'Error loading attendees. Please try again.';
+      attendeesSelect.appendChild(errorOption);
     });
 }
 
@@ -139,10 +163,29 @@ function createMeetingObject() {
 }
 
 function saveMeeting(meeting) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    showToast('You must be logged in to book a meeting', 'error');
+    return;
+  }
+
+  const meetingData = {
+    id: meeting.id,
+    title: meeting.title,
+    start_time: meeting.date,
+    end_time: new Date(new Date(meeting.date).getTime() + meeting.duration * 60000).toISOString(),
+    room_id: meeting.room,
+    user_id: currentUser.id,
+    attendees: meeting.attendees,
+    agenda: meeting.agenda,
+    recurring: meeting.recurring,
+    video_conference: meeting.videoConference
+  };
+
   fetch('/api/meetings', {
     method: 'POST',
     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(meeting)
+    body: JSON.stringify(meetingData)
   })
   .then(res => res.ok ? res.json() : res.json().then(err => Promise.reject(err)))
   .then(() => {
@@ -303,5 +346,13 @@ function getCurrentUser() {
   const user = localStorage.getItem('currentUser');
   return user ? JSON.parse(user) : null;
 }
+
+const cancelBtn = document.getElementById('cancel-booking');
+          if (cancelBtn) {
+            cancelBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              window.location.href = '/dashboard';
+            });
+          }
 
 document.addEventListener('DOMContentLoaded', initBooking);

@@ -36,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await response.json();
   
         console.log('Login success:', data);
+                  // After successful login
+localStorage.setItem('currentUser', JSON.stringify(response.user));
+localStorage.setItem('token', response.token); // Don't forget the token
   
         if (data.token) {
           localStorage.setItem('token', data.token);
@@ -92,4 +95,3 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(fallback);
     }
   }
-  

@@ -1,7 +1,8 @@
 let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+let currentMeetingIdToCancel = null;
 
 function initDashboard() {
-  console.log('Dashboard JS loaded');
+  currentUser = getCurrentUser(); // Refresh current user
   console.log('Current user:', currentUser);
 
   loadUpcomingMeetings();
@@ -12,9 +13,11 @@ function initDashboard() {
   if (scheduleBtn) scheduleBtn.addEventListener('click', () => window.location.href = '/booking');
   if (minutesBtn) minutesBtn.addEventListener('click', () => window.location.href = '/review');
 
-  if (currentUser?.role === 'admin') showAdminDashboard();
+  // Check if user is admin
+  if (currentUser?.role === 'admin') {
+    showAdminDashboard();
+  }
 }
-
 function showAdminDashboard() {
   const cards = document.querySelectorAll('.card');
   if (!cards.length) return;
@@ -28,11 +31,15 @@ function showAdminDashboard() {
     <div class="admin-stats">
       <div class="stat-card">
         <h3>Total Meetings</h3>
-        <p id="total-meetings">0</p>
+        <p id="total-meetings"><i class="fas fa-spinner fa-spin"></i> Loading...</p>
       </div>
       <div class="stat-card">
         <h3>Active Users</h3>
-        <p id="active-users">0</p>
+        <p id="active-users"><i class="fas fa-spinner fa-spin"></i> Loading...</p>
+      </div>
+      <div class="stat-card">
+        <h3>Rooms</h3>
+        <p id="total-rooms"><i class="fas fa-spinner fa-spin"></i> Loading...</p>
       </div>
     </div>
   `;
@@ -42,11 +49,29 @@ function showAdminDashboard() {
 }
 
 function loadAdminStats() {
-  const meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-  const users = JSON.parse(localStorage.getItem('users')) || [];
+  // Show loading states
+  document.getElementById('total-meetings').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+  document.getElementById('active-users').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+  document.getElementById('total-rooms').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
 
-  document.getElementById('total-meetings').textContent = meetings.length;
-  document.getElementById('active-users').textContent = users.length;
+  // Fetch all data in parallel
+  Promise.all([
+    fetch('/api/meetings', { headers: getAuthHeaders() }),
+    fetch('/api/users', { headers: getAuthHeaders() }),
+    fetch('/api/rooms', { headers: getAuthHeaders() })
+  ])
+  .then(responses => Promise.all(responses.map(res => res.json())))
+  .then(([meetings, users, rooms]) => {
+    document.getElementById('total-meetings').textContent = meetings.length || 0;
+    document.getElementById('active-users').textContent = users.length || 0;
+    document.getElementById('total-rooms').textContent = rooms.length || 0;
+  })
+  .catch(err => {
+    console.error('Error loading admin stats:', err);
+    document.getElementById('total-meetings').textContent = 'Error';
+    document.getElementById('active-users').textContent = 'Error';
+    document.getElementById('total-rooms').textContent = 'Error';
+  });
 }
 
 function loadUpcomingMeetings() {
@@ -67,15 +92,30 @@ function renderMeetings(meetings, rooms) {
   const list = document.getElementById('upcoming-meetings');
   list.innerHTML = '';
 
-  if (!meetings.length) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    list.innerHTML = '<p>Please log in to view meetings</p>';
+    return;
+  }
+
+  // Get users for organizer names
+  const users = JSON.parse(localStorage.getItem('users')) || [];
+
+  // Filter meetings where user is organizer or attendee
+  const userMeetings = meetings.filter(meeting => 
+    meeting.user_id === currentUser.id || 
+    (meeting.attendees && meeting.attendees.includes(currentUser.id))
+  );
+
+  if (!userMeetings.length) {
     list.innerHTML = '<p>No upcoming meetings. Book one now!</p>';
     return;
   }
 
-  meetings.forEach(meeting => {
+  userMeetings.forEach(meeting => {
     const room = rooms.find(r => r.id == meeting.room_id) || {};
-    const isOrganizer = getCurrentUser() &&
-      (getCurrentUser().role === 'admin' || meeting.user_id === getCurrentUser().id);
+    const organizer = users.find(u => u.id == meeting.user_id);
+    const isOrganizer = currentUser.id === meeting.user_id;
 
     const div = document.createElement('div');
     div.className = 'meeting-card';
@@ -83,54 +123,107 @@ function renderMeetings(meetings, rooms) {
     div.innerHTML = `
       <h3>${meeting.title}</h3>
       <p><strong>Time:</strong> ${formatMeetingDateTime(meeting.start_time)} - ${formatMeetingDateTime(meeting.end_time)}</p>
-      <p><strong>Room:</strong> ${room.name || 'Unknown Room'} (Capacity: ${room.capacity || 'N/A'})</p>
-      <p><strong>Organizer:</strong> ${meeting.user_id}</p>
+      <p><strong>Room:</strong> ${room.name || 'Unknown Room'} (Capacity: ${room.capacity || 'N/A'}) (Location: ${room.location || 'N/A'})</p>
+      <p><strong>Organizer:</strong> ${organizer ? `${organizer.first_name} ${organizer.last_name}` : 'Unknown'}</p>
       <div class="meeting-actions">
         <button class="btn btn-primary join-meeting" data-id="${meeting.id}">Join</button>
         ${isOrganizer ? `<button class="btn btn-warning edit-meeting" data-id="${meeting.id}">Edit</button>` : ''}
-        ${getCurrentUser()?.role === 'admin' ? `<button class="btn btn-danger cancel-meeting" data-id="${meeting.id}">Cancel</button>` : ''}
+        ${currentUser.role === 'admin' ? `<button class="btn btn-danger cancel-meeting" data-id="${meeting.id}">Cancel</button>` : ''}
       </div>
     `;
     list.appendChild(div);
   });
 
-  document.querySelectorAll('.join-meeting').forEach(btn => {
-    btn.addEventListener('click', () => {
-      window.location.href = `/active-meeting?id=${btn.dataset.id}`;
-    });
-  });
-
-  document.querySelectorAll('.edit-meeting').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const meetingId = btn.dataset.id;
+  document.getElementById('upcoming-meetings').addEventListener('click', (e) => {
+    const joinBtn = e.target.closest('.join-meeting');
+    const editBtn = e.target.closest('.edit-meeting');
+    const cancelBtn = e.target.closest('.cancel-meeting');
+    
+    if (joinBtn) {
+      window.location.href = `/active-meeting?id=${joinBtn.dataset.id}`;
+    }
+    
+    if (editBtn) {
+      const meetingId = editBtn.dataset.id;
       window.location.href = `/booking?edit=${meetingId}`;
-    });
-  });
-
-  document.querySelectorAll('.cancel-meeting').forEach(btn => {
-    btn.addEventListener('click', () => {
-      cancelMeeting(btn.dataset.id);
-    });
+    }
+    
+    if (cancelBtn) {
+      cancelMeeting(cancelBtn.dataset.id);
+    }
   });
 }
 
 function cancelMeeting(meetingId) {
-  showModal({
-    title: 'Confirm Cancellation',
-    message: 'Are you sure you want to cancel this meeting?',
-    onConfirm: () => {
+  currentMeetingIdToCancel = meetingId;
+  
+  // Show confirmation modal
+  const modal = document.getElementById('confirmation-modal');
+  const title = document.getElementById('confirmation-title');
+  const message = document.getElementById('confirmation-message');
+  
+  if (modal && title && message) {
+    title.textContent = 'Confirm Cancellation';
+    message.textContent = 'Are you sure you want to cancel this meeting?';
+    modal.style.display = 'block';
+    
+    // Set up event listeners for modal buttons
+    document.getElementById('cancel-confirmation').onclick = () => {
+      modal.style.display = 'none';
+    };
+    
+    document.getElementById('confirm-action').onclick = () => {
+      modal.style.display = 'none';
+      confirmMeetingCancellation();
+    };
+    
+    // Close when clicking outside modal
+    window.onclick = (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    };
+  } else {
+    // Fallback to browser confirm
+    if (confirm('Are you sure you want to cancel this meeting?')) {
+      confirmMeetingCancellation();
+    }
+  }
+}
+
+function confirmMeetingCancellation() {
+  if (!currentMeetingIdToCancel) return;
+  
+  // Show loading state
+  showToast('Cancelling meeting...', 'info');
+  
+  fetch(`/api/meetings/${currentMeetingIdToCancel}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  .then(response => {
+    if (response.ok) {
+      // Update local data
       let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-      meetings = meetings.filter(m => m.id != meetingId);
+      meetings = meetings.filter(m => m.id != currentMeetingIdToCancel);
       localStorage.setItem('meetings', JSON.stringify(meetings));
-      showToast('Meeting cancelled', 'success');
+      
+      showToast('Meeting cancelled successfully', 'success');
       loadUpcomingMeetings();
       if (currentUser?.role === 'admin') loadAdminStats();
-    },
-    showCancel: true,
-    confirmText: 'Confirm',
-    cancelText: 'Cancel'
+    } else {
+      throw new Error('Failed to cancel meeting');
+    }
+  })
+  .catch(error => {
+    console.error('Error cancelling meeting:', error);
+    showToast('Failed to cancel meeting', 'error');
+  })
+  .finally(() => {
+    currentMeetingIdToCancel = null;
   });
 }
+
 
 function formatMeetingDateTime(dateString) {
   const date = new Date(dateString);

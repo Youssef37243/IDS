@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Meeting Room - Login</title>
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -19,7 +18,7 @@
   </header>
 
   <main class="container" id="main-content" tabindex="-1">
-    <div class="card" style="max-width: 500px; margin: 50px auto;">
+    <div class="card login-card-wrapper">
       <div class="card-header">
         <h2>Login</h2>
       </div>

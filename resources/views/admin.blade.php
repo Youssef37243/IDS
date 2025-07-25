@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Meeting Room - Admin Panel</title>
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body id="admin-page">
     <div id="header"></div>
@@ -33,6 +32,10 @@
               <input type="number" id="room-capacity" class="form-control" min="1" required>
             </div>
             <div class="form-group">
+              <label for="room-location">Location</label>
+              <input type="text" id="room-location" class="form-control" required>
+            </div>
+            <div class="form-group">
               <label>Equipment</label>
               <div class="equipment-checkboxes">
                 <label><input type="checkbox" name="equipment" value="projector"> Projector</label>
@@ -52,6 +55,7 @@
               <tr>
                 <th>Room Name</th>
                 <th>Capacity</th>
+                <th>Location</th>
                 <th>Equipment</th>
                 <th>Actions</th>
               </tr>
@@ -82,12 +86,13 @@
               <input type="password" id="user-password" class="form-control" required>
             </div>
             <div class="form-group">
-              <label for="user-role">Role</label>
-              <select id="user-role" class="form-control" >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
+            <label for="user-role">Role</label>
+            <select id="user-role" class="form-control" required>
+              <option value="" disabled selected>Select a role</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
             <button type="submit" class="btn btn-primary">Add User</button>
           </form>
         </div>
@@ -108,6 +113,19 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmation Modal -->
+<div id="confirmation-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close" id="close-confirmation-modal">&times;</span>
+    <h2 id="confirmation-title"></h2>
+    <p id="confirmation-message"></p>
+    <div class="modal-actions">
+      <button id="cancel-confirmation" class="btn btn-secondary">Cancel</button>
+      <button id="confirm-action" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
   </main>
 
   <script src="{{ asset('js/script.js') }}"></script>

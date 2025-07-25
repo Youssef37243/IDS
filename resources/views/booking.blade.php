@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Meeting Room - Book Meeting</title>
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
 </head>
 <body id="booking-page">
       <div id="header"></div>
@@ -43,14 +41,12 @@
         </div>
         
         <div class="form-group">
-          <label for="attendees">Attendees</label>
-          <select id="attendees" class="form-control" multiple>
-            <option value="1">john@example.com</option>
-            <option value="2">jane@example.com</option>
-            <option value="3">mike@example.com</option>
-          </select>
-          <small>Hold Ctrl/Cmd to select multiple</small>
-        </div>
+  <label for="attendees">Attendees </label>
+  <select id="attendees" class="form-control" multiple>
+    <!-- Options will be loaded dynamically -->
+  </select>
+  <small>Hold Ctrl/Cmd to select multiple</small>
+</div>
         
         <div class="form-group">
           <label for="agenda">Agenda</label>
@@ -73,7 +69,7 @@
         
         <div class="form-group">
           <button type="submit" class="btn btn-primary">Book Now</button>
-          <button type="button" class="btn btn-secondary" onclick="window.location.href='dashboard.html'">Cancel</button>
+          <button type="button" class="btn btn-secondary" id="cancel-booking">Cancel</button>
         </div>
       </form>
     </div>

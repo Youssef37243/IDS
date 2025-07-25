@@ -1,4 +1,3 @@
-// Fetch user info from API for header rendering (NO jQuery)
 fetch('/api/profile', {
   method: 'GET',
   headers: getAuthHeaders()
@@ -76,25 +75,12 @@ function renderHeader(currentUser) {
             cancelBtn.onclick = closeModal;
 
             confirmBtn.onclick = () => {
-              logoutModal.style.display = 'none';
+                logoutModal.style.display = 'none';
 
-              fetch('/api/logout', {
-                method: 'POST',
-                headers: getAuthHeaders()
-              })
-                .then(res => {
-                  if (res.ok) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('currentUser');
-                    showToast('Logged out successfully.', 'success');
-                    setTimeout(() => window.location.href = '/login', 1000);
-                  } else {
-                    throw new Error();
-                  }
-                })
-                .catch(() => {
-                  showToast('Logout failed.', 'error');
-                });
+                localStorage.removeItem('currentUser');
+                localStorage.removeItem('token');
+                currentUser = null;
+                window.location.href = '/login';
             };
 
             // Hide modal if click outside
