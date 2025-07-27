@@ -13,39 +13,36 @@
   <main class="container">
     <div class="card">
       <div class="card-header">
-        <h2>Meeting Minutes: <span id="minutes-title"></span></h2>
+        <h2>Meeting Minutes: <span id="minutes-title">New Minutes</span></h2>
       </div>
       
       <form id="minutes-form">
         <div class="form-group">
           <label for="minutes-date">Meeting Date</label>
-          <input type="date" id="minutes-date" class="form-control" required>
+          <input type="datetime-local" id="minutes-date" class="form-control" required>
         </div>
         
         <div class="form-group">
           <label for="minutes-attendees">Attendees</label>
-          <select id="minutes-attendees" class="form-control" multiple>
-            Loading...
+          <select id="minutes-attendees" class="form-control" multiple required>
+            <option value="" disabled>Loading attendees...</option>
           </select>
           <small>Hold Ctrl/Cmd to select multiple</small>
         </div>
         
         <div class="form-group">
           <label for="minutes-agenda">Agenda</label>
-          <textarea id="minutes-agenda" class="form-control" rows="3">
-            Loading...
-          </textarea>
+          <textarea id="minutes-agenda" class="form-control" rows="3" required></textarea>
         </div>
         
         <div class="form-group">
           <label>Discussion Points</label>
           <div id="discussion-points">
-            <div class="discussion-point">
-              <input type="text" class="form-control" placeholder="Topic" value="Project scope">
-              <textarea class="form-control" rows="2" placeholder="Details">The project will focus on developing the new customer portal with enhanced features.</textarea>
-            </div>
-            <button type="button" class="btn btn-secondary" id="add-point">Add Discussion Point</button>
+            <!-- Points will be added here -->
           </div>
+          <button type="button" class="btn btn-secondary" id="add-point">
+            <i class="fas fa-plus"></i> Add Discussion Point
+          </button>
         </div>
         
         <div class="form-group">
@@ -61,26 +58,12 @@
               </tr>
             </thead>
             <tbody id="action-items">
-              <tr>
-                <td><input type="text" class="form-control" value="Prepare requirements document"></td>
-                <td>
-                  <select class="form-control">
-
-                  </select>
-                </td>
-                <td><input type="date" class="form-control" value="2023-06-20"></td>
-                <td>
-                  <select class="form-control">
-                    <option value="pending">Pending</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </td>
-                <td><button type="button" class="btn btn-danger remove-action">Remove</button></td>
-              </tr>
+              <!-- Action items will be added here -->
             </tbody>
           </table>
-          <button type="button" class="btn btn-secondary" id="add-action">Add Action Item</button>
+          <button type="button" class="btn btn-secondary" id="add-action">
+            <i class="fas fa-plus"></i> Add Action Item
+          </button>
         </div>
         
         <div class="form-group">
@@ -90,13 +73,17 @@
         
         <div class="form-group">
           <label for="minutes-attachments">Attachments</label>
-          <input type="file" id="minutes-attachments" multiple>
-          <div id="attachments-list"></div>
+          <input type="file" id="minutes-attachments" class="form-control" multiple>
+          <div id="attachments-list" class="mt-2"></div>
         </div>
         
         <div class="form-group">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-danger" onclick="window.location.href='dashboard.html'">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Minutes
+          </button>
+          <button type="button" class="btn btn-danger" id="cancel-minutes">
+            <i class="fas fa-times"></i> Cancel
+          </button>
         </div>
       </form>
     </div>

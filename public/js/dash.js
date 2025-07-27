@@ -1,30 +1,9 @@
-let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-let currentMeetingIdToCancel = null;
-
-function initDashboard() {
-  currentUser = getCurrentUser(); // Refresh current user
-  console.log('Current user:', currentUser);
-
-  loadUpcomingMeetings();
-
-  const scheduleBtn = document.getElementById('schedule-meeting');
-  const minutesBtn = document.getElementById('view-minutes');
-
-  if (scheduleBtn) scheduleBtn.addEventListener('click', () => window.location.href = '/booking');
-  if (minutesBtn) minutesBtn.addEventListener('click', () => window.location.href = '/review');
-
-  // Check if user is admin
-  if (currentUser?.role === 'admin') {
-    showAdminDashboard();
-  }
-}
+// Add this function before initDashboard
 function showAdminDashboard() {
-  const cards = document.querySelectorAll('.card');
-  if (!cards.length) return;
-
-  const adminCard = document.createElement('div');
-  adminCard.className = 'card admin-dashboard';
-  adminCard.innerHTML = `
+  // Create admin dashboard section
+  const adminSection = document.createElement('div');
+  adminSection.className = 'card admin-dashboard';
+  adminSection.innerHTML = `
     <div class="card-header">
       <h2>Admin Dashboard</h2>
     </div>
@@ -38,103 +17,202 @@ function showAdminDashboard() {
         <p id="active-users"><i class="fas fa-spinner fa-spin"></i> Loading...</p>
       </div>
       <div class="stat-card">
-        <h3>Rooms</h3>
+        <h3>Available Rooms</h3>
         <p id="total-rooms"><i class="fas fa-spinner fa-spin"></i> Loading...</p>
       </div>
     </div>
   `;
-  cards[0].parentNode.insertBefore(adminCard, cards[0].nextSibling);
 
+  // Insert after the first card
+  const firstCard = document.querySelector('.card');
+  if (firstCard) {
+    firstCard.parentNode.insertBefore(adminSection, firstCard.nextSibling);
+  }
+
+  // Load admin statistics
   loadAdminStats();
 }
 
-function loadAdminStats() {
-  // Show loading states
-  document.getElementById('total-meetings').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-  document.getElementById('active-users').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-  document.getElementById('total-rooms').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+// Add this function to load admin statistics
+async function loadAdminStats() {
+  try {
+    // Show loading states
+    setAdminStat('total-meetings', '<i class="fas fa-spinner fa-spin"></i> Loading...');
+    setAdminStat('active-users', '<i class="fas fa-spinner fa-spin"></i> Loading...');
+    setAdminStat('total-rooms', '<i class="fas fa-spinner fa-spin"></i> Loading...');
 
-  // Fetch all data in parallel
-  Promise.all([
-    fetch('/api/meetings', { headers: getAuthHeaders() }),
-    fetch('/api/users', { headers: getAuthHeaders() }),
-    fetch('/api/rooms', { headers: getAuthHeaders() })
-  ])
-  .then(responses => Promise.all(responses.map(res => res.json())))
-  .then(([meetings, users, rooms]) => {
-    document.getElementById('total-meetings').textContent = meetings.length || 0;
-    document.getElementById('active-users').textContent = users.length || 0;
-    document.getElementById('total-rooms').textContent = rooms.length || 0;
-  })
-  .catch(err => {
-    console.error('Error loading admin stats:', err);
-    document.getElementById('total-meetings').textContent = 'Error';
-    document.getElementById('active-users').textContent = 'Error';
-    document.getElementById('total-rooms').textContent = 'Error';
-  });
-}
-
-function loadUpcomingMeetings() {
-  fetch('/api/meetings', { headers: getAuthHeaders() })
-    .then(res => res.json())
-    .then(meetings => {
+    // Fetch all data in parallel
+    const [meetingsRes, usersRes, roomsRes] = await Promise.all([
+      fetch('/api/meetings', { headers: getAuthHeaders() }),
+      fetch('/api/users', { headers: getAuthHeaders() }),
       fetch('/api/rooms', { headers: getAuthHeaders() })
-        .then(res => res.json())
-        .then(rooms => renderMeetings(meetings, rooms))
-        .catch(() => renderMeetings(meetings, []));
-    })
-    .catch(() => renderMeetings([], []));
+    ]);
+
+    if (!meetingsRes.ok || !usersRes.ok || !roomsRes.ok) {
+      throw new Error('Failed to load admin statistics');
+    }
+
+    const [meetings, users, rooms] = await Promise.all([
+      meetingsRes.json(),
+      usersRes.json(),
+      roomsRes.json()
+    ]);
+
+    // Update stats
+    setAdminStat('total-meetings', meetings.length);
+    setAdminStat('active-users', users.length);
+    setAdminStat('total-rooms', rooms.length);
+
+  } catch (error) {
+    console.error('Error loading admin stats:', error);
+    setAdminStat('total-meetings', 'Error');
+    setAdminStat('active-users', 'Error');
+    setAdminStat('total-rooms', 'Error');
+  }
 }
 
-function renderMeetings(meetings, rooms) {
-  meetings.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+// Helper function to set admin stat values
+function setAdminStat(elementId, value) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.innerHTML = typeof value === 'number' ? value : value;
+  }
+}
 
+// Update initDashboard to check for admin role properly
+function initDashboard() {
+  const currentUser = getCurrentUser();
+  
+  loadUpcomingMeetings();
+  setupEventListeners();
+  
+  // Check if user is admin
+  if (currentUser?.role === 'admin') {
+    showAdminDashboard();
+  }
+}
+
+function initDashboard() {
+  loadUpcomingMeetings();
+  setupEventListeners();
+  
+  // Check if user is admin
+  const currentUser = getCurrentUser();
+  if (currentUser?.role === 'admin') {
+    showAdminDashboard();
+  }
+}
+
+async function loadUpcomingMeetings() {
+  try {
+    const response = await fetch('/api/meetings', { 
+      headers: getAuthHeaders() 
+    });
+    
+    if (!response.ok) throw new Error('Failed to load meetings');
+    
+    const meetings = await response.json();
+    renderMeetings(meetings);
+  } catch (error) {
+    console.error('Error loading meetings:', error);
+    const list = document.getElementById('upcoming-meetings');
+    if (list) {
+      list.innerHTML = '<p class="error">Failed to load meetings. Please try again.</p>';
+    }
+  }
+}
+
+function renderMeetings(meetings) {
   const list = document.getElementById('upcoming-meetings');
+  if (!list) return;
+  
   list.innerHTML = '';
-
+  
   const currentUser = getCurrentUser();
   if (!currentUser) {
     list.innerHTML = '<p>Please log in to view meetings</p>';
     return;
   }
 
-  // Get users for organizer names
-  const users = JSON.parse(localStorage.getItem('users')) || [];
+  // Filter and sort meetings
+  const now = new Date();
+  const upcomingMeetings = meetings
+    .filter(meeting => new Date(meeting.end_time) > now)
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
-  // Filter meetings where user is organizer or attendee
-  const userMeetings = meetings.filter(meeting => 
-    meeting.user_id === currentUser.id || 
-    (meeting.attendees && meeting.attendees.includes(currentUser.id))
-  );
-
-  if (!userMeetings.length) {
-    list.innerHTML = '<p>No upcoming meetings. Book one now!</p>';
+  if (!upcomingMeetings.length) {
+    list.innerHTML = '<p>No upcoming meetings. Schedule one now!</p>';
     return;
   }
 
-  userMeetings.forEach(meeting => {
-    const room = rooms.find(r => r.id == meeting.room_id) || {};
-    const organizer = users.find(u => u.id == meeting.user_id);
-    const isOrganizer = currentUser.id === meeting.user_id;
-
-    const div = document.createElement('div');
-    div.className = 'meeting-card';
-    div.dataset.id = meeting.id;
-    div.innerHTML = `
-      <h3>${meeting.title}</h3>
-      <p><strong>Time:</strong> ${formatMeetingDateTime(meeting.start_time)} - ${formatMeetingDateTime(meeting.end_time)}</p>
-      <p><strong>Room:</strong> ${room.name || 'Unknown Room'} (Capacity: ${room.capacity || 'N/A'}) (Location: ${room.location || 'N/A'})</p>
-      <p><strong>Organizer:</strong> ${organizer ? `${organizer.first_name} ${organizer.last_name}` : 'Unknown'}</p>
-      <div class="meeting-actions">
-        <button class="btn btn-primary join-meeting" data-id="${meeting.id}">Join</button>
-        ${isOrganizer ? `<button class="btn btn-warning edit-meeting" data-id="${meeting.id}">Edit</button>` : ''}
-        ${currentUser.role === 'admin' ? `<button class="btn btn-danger cancel-meeting" data-id="${meeting.id}">Cancel</button>` : ''}
-      </div>
-    `;
-    list.appendChild(div);
+  upcomingMeetings.forEach(meeting => {
+    const meetingEl = createMeetingElement(meeting, currentUser);
+    list.appendChild(meetingEl);
   });
+}
 
-  document.getElementById('upcoming-meetings').addEventListener('click', (e) => {
+function createMeetingElement(meeting, currentUser) {
+  const isOrganizer = meeting.user_id === currentUser.id;
+  const isAttendee = meeting.attendees?.some(a => a.user_id === currentUser.id);
+  
+  const div = document.createElement('div');
+  div.className = 'meeting-card';
+  div.dataset.id = meeting.id;
+  
+  const startTime = new Date(meeting.start_time);
+  const endTime = new Date(meeting.end_time);
+  
+  div.innerHTML = `
+    <div class="meeting-header">
+      <h3>${meeting.title}</h3>
+      ${isOrganizer ? '<span class="badge organizer">Organizer</span>' : ''}
+      ${isAttendee && !isOrganizer ? '<span class="badge attendee">Attendee</span>' : ''}
+    </div>
+    <div class="meeting-details">
+      <p><i class="fas fa-clock"></i> ${formatMeetingDateTime(startTime)} - ${formatTime(endTime)}</p>
+      <p><i class="fas fa-map-marker-alt"></i> ${meeting.room?.name || 'Unknown Room'}</p>
+      <p><i class="fas fa-user"></i> Organized by: ${meeting.user?.first_name} ${meeting.user?.last_name}</p>
+      ${meeting.agenda ? `<p><i class="fas fa-clipboard"></i> ${meeting.agenda}</p>` : ''}
+    </div>
+    <div class="meeting-actions">
+      <button class="btn btn-primary join-meeting" data-id="${meeting.id}">
+        <i class="fas fa-video"></i> Join
+      </button>
+      ${isOrganizer ? `
+        <button class="btn btn-warning edit-meeting" data-id="${meeting.id}">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+      ` : ''}
+      ${currentUser.role === 'admin' && isOrganizer ? `
+        <button class="btn btn-danger cancel-meeting" data-id="${meeting.id}">
+          <i class="fas fa-trash"></i> Cancel
+        </button>
+      ` : ''}
+    </div>
+  `;
+  
+  return div;
+}
+
+function setupEventListeners() {
+  // Schedule meeting button
+  const scheduleBtn = document.getElementById('schedule-meeting');
+  if (scheduleBtn) {
+    scheduleBtn.addEventListener('click', () => {
+      window.location.href = '/booking';
+    });
+  }
+
+  // View minutes button
+  const minutesBtn = document.getElementById('view-minutes');
+  if (minutesBtn) {
+    minutesBtn.addEventListener('click', () => {
+      window.location.href = '/minutes';
+    });
+  }
+
+  // Meeting actions (delegated events)
+  document.addEventListener('click', (e) => {
     const joinBtn = e.target.closest('.join-meeting');
     const editBtn = e.target.closest('.edit-meeting');
     const cancelBtn = e.target.closest('.cancel-meeting');
@@ -144,91 +222,54 @@ function renderMeetings(meetings, rooms) {
     }
     
     if (editBtn) {
-      const meetingId = editBtn.dataset.id;
-      window.location.href = `/booking?edit=${meetingId}`;
+      window.location.href = `/booking?edit=${editBtn.dataset.id}`;
     }
     
     if (cancelBtn) {
-      cancelMeeting(cancelBtn.dataset.id);
+      showCancelConfirmation(cancelBtn.dataset.id);
     }
   });
 }
 
-function cancelMeeting(meetingId) {
-  currentMeetingIdToCancel = meetingId;
-  
-  // Show confirmation modal
-  const modal = document.getElementById('confirmation-modal');
-  const title = document.getElementById('confirmation-title');
-  const message = document.getElementById('confirmation-message');
-  
-  if (modal && title && message) {
-    title.textContent = 'Confirm Cancellation';
-    message.textContent = 'Are you sure you want to cancel this meeting?';
-    modal.style.display = 'block';
+function showCancelConfirmation(meetingId) {
+  showModal({
+    title: 'Confirm Cancellation',
+    message: 'Are you sure you want to cancel this meeting?',
+    confirmText: 'Yes, Cancel',
+    cancelText: 'No, Keep It',
+    showCancel: true,
+    onConfirm: () => cancelMeeting(meetingId)
+  });
+}
+
+async function cancelMeeting(meetingId) {
+  try {
+    showToast('Cancelling meeting...', 'info');
     
-    // Set up event listeners for modal buttons
-    document.getElementById('cancel-confirmation').onclick = () => {
-      modal.style.display = 'none';
-    };
+    const response = await fetch(`/api/meetings/${meetingId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     
-    document.getElementById('confirm-action').onclick = () => {
-      modal.style.display = 'none';
-      confirmMeetingCancellation();
-    };
+    if (!response.ok) throw new Error('Failed to cancel meeting');
     
-    // Close when clicking outside modal
-    window.onclick = (event) => {
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    };
-  } else {
-    // Fallback to browser confirm
-    if (confirm('Are you sure you want to cancel this meeting?')) {
-      confirmMeetingCancellation();
+    showToast('Meeting cancelled successfully', 'success');
+    loadUpcomingMeetings();
+    
+    // Refresh admin stats if admin
+    const currentUser = getCurrentUser();
+    if (currentUser?.role === 'admin') {
+      loadAdminStats();
     }
+  } catch (error) {
+    console.error('Error cancelling meeting:', error);
+    showToast('Failed to cancel meeting', 'error');
   }
 }
 
-function confirmMeetingCancellation() {
-  if (!currentMeetingIdToCancel) return;
-  
-  // Show loading state
-  showToast('Cancelling meeting...', 'info');
-  
-  fetch(`/api/meetings/${currentMeetingIdToCancel}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  })
-  .then(response => {
-    if (response.ok) {
-      // Update local data
-      let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-      meetings = meetings.filter(m => m.id != currentMeetingIdToCancel);
-      localStorage.setItem('meetings', JSON.stringify(meetings));
-      
-      showToast('Meeting cancelled successfully', 'success');
-      loadUpcomingMeetings();
-      if (currentUser?.role === 'admin') loadAdminStats();
-    } else {
-      throw new Error('Failed to cancel meeting');
-    }
-  })
-  .catch(error => {
-    console.error('Error cancelling meeting:', error);
-    showToast('Failed to cancel meeting', 'error');
-  })
-  .finally(() => {
-    currentMeetingIdToCancel = null;
-  });
-}
-
-
-function formatMeetingDateTime(dateString) {
-  const date = new Date(dateString);
+function formatMeetingDateTime(date) {
   return date.toLocaleString([], {
-    year: 'numeric',
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -236,9 +277,13 @@ function formatMeetingDateTime(dateString) {
   });
 }
 
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function getAuthHeaders() {
   const token = localStorage.getItem('token');
-  return token ? { 'Authorization': 'Bearer ' + token } : {};
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
 function getCurrentUser() {
@@ -246,16 +291,4 @@ function getCurrentUser() {
   return user ? JSON.parse(user) : null;
 }
 
-// WAIT FOR BUTTONS TO EXIST BEFORE RUNNING initDashboard
-document.addEventListener('DOMContentLoaded', () => {
-  const observer = new MutationObserver(() => {
-    const scheduleBtn = document.getElementById('schedule-meeting');
-    const minutesBtn = document.getElementById('view-minutes');
-    if (scheduleBtn && minutesBtn) {
-      observer.disconnect();
-      initDashboard();
-    }
-  });
-
-  observer.observe(document.body, { childList: true, subtree: true });
-});
+document.addEventListener('DOMContentLoaded', initDashboard);

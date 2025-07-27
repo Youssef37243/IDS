@@ -140,7 +140,6 @@ document.addEventListener('DOMContentLoaded', function() {
   updateUIForUser();
   
   // Initialize page-specific scripts if they exist
-  if (typeof initDashboard === 'function') initDashboard();
   if (typeof initActiveMeeting === 'function') initActiveMeeting();
   if (typeof initBooking === 'function') initBooking();
   if (typeof initMinutes === 'function') initMinutes();

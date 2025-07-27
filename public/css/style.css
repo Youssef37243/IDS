@@ -1333,3 +1333,174 @@ body.modal-open {
 .back-to-dashboard a i {
   font-size: 0.9em;
 }
+
+/* Meeting Cards */
+.meeting-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.meeting-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.meeting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.meeting-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.meeting-details {
+  margin-bottom: 1.5rem;
+}
+
+.meeting-details p {
+  margin: 0.5rem 0;
+  color: #555;
+}
+
+.meeting-details i {
+  margin-right: 0.5rem;
+  color: #666;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.meeting-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.badge.organizer {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.badge.attendee {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .meeting-actions {
+    flex-direction: column;
+  }
+  
+  .meeting-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Minutes Page Styles */
+#minutes-page .card {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.discussion-point {
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #007bff;
+}
+
+.discussion-point textarea {
+  min-height: 100px;
+}
+
+#action-items td {
+  vertical-align: middle;
+}
+
+#action-items input,
+#action-items select {
+  width: 100%;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.in-progress {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-badge.completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.attachment {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.attachment i {
+  margin-right: 0.5rem;
+  color: #6c757d;
+}
+
+.file-size {
+  margin-left: auto;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+#attachments-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Review Page Styles */
+#review-page .past-meetings {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+#minutes-detail .minutes-content > div {
+  margin-bottom: 2rem;
+}
+
+#minutes-detail .discussion-point {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+#minutes-detail .discussion-point:last-child {
+  border-bottom: none;
+}

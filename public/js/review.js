@@ -14,10 +14,10 @@ function initReview() {
     fetch('/api/minutes', { headers: getAuthHeaders() }).then(r => r.json()),
     fetch('/api/users', { headers: getAuthHeaders() }).then(r => r.json())
   ])
-  .then(([meetings, minutesData, usersData]) => {
+  .then(([meetings, minutes, users]) => {
     allMeetings = meetings;
-    allMinutes = minutesData;
-    allUsers = usersData.data || usersData;
+    allMinutes = minutes;
+    allUsers = users;
     renderMeetingsTable();
   })
   .catch(err => {
@@ -35,23 +35,28 @@ function renderMeetingsTable() {
   const tbl = document.getElementById('past-meetings');
   tbl.innerHTML = '';
 
-  // Filter meetings that have minutes or can have minutes created
-  const meetingsWithMinutes = allMeetings.filter(meeting => {
-    const hasMinutes = allMinutes.some(m => m.meeting_id == meeting.id);
-    const isPast = new Date(meeting.end_time) < new Date();
-    return hasMinutes || isPast;
+  // Create a map of meetings with their minutes
+  const meetingsMap = new Map();
+  allMeetings.forEach(meeting => {
+    const minutes = allMinutes.find(m => m.meeting_id === meeting.id);
+    meetingsMap.set(meeting.id, {
+      meeting,
+      minutes
+    });
   });
 
-  if (meetingsWithMinutes.length === 0) {
-    tbl.innerHTML = '<tr><td colspan="4" class="text-center">No past meetings with minutes found</td></tr>';
+  if (meetingsMap.size === 0) {
+    tbl.innerHTML = '<tr><td colspan="4" class="text-center">No meetings with minutes found</td></tr>';
     return;
   }
 
-  meetingsWithMinutes.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-  
-  meetingsWithMinutes.forEach(meeting => {
-    const minute = allMinutes.find(m => m.meeting_id == meeting.id);
-    const actionCount = minute?.action_items?.length || 0;
+  // Convert to array and sort by date (newest first)
+  const sortedMeetings = Array.from(meetingsMap.values()).sort((a, b) => {
+    return new Date(b.meeting.start_time) - new Date(a.meeting.start_time);
+  });
+
+  sortedMeetings.forEach(({meeting, minutes}) => {
+    const actionCount = minutes?.action_items?.length || 0;
     
     const row = document.createElement('tr');
     row.dataset.id = meeting.id;
@@ -61,25 +66,47 @@ function renderMeetingsTable() {
       <td>${actionCount} action item${actionCount !== 1 ? 's' : ''}</td>
       <td>
         <div class="action-buttons">
-          ${minute ? `<button class="btn btn-primary view-minutes" data-id="${meeting.id}"><i class="fas fa-eye"></i> View</button>` : ''}
-          <button class="btn btn-warning edit-minutes" data-id="${meeting.id}">
-            <i class="fas fa-edit"></i> ${minute ? 'Edit' : 'Create'}
-          </button>
-          ${minute ? `<button class="btn btn-danger delete-minutes" data-id="${meeting.id}"><i class="fas fa-trash"></i> Delete</button>` : ''}
+          ${minutes ? `
+            <button class="btn btn-primary view-minutes" data-id="${meeting.id}">
+              <i class="fas fa-eye"></i> View
+            </button>
+            <button class="btn btn-warning edit-minutes" data-id="${meeting.id}">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <button class="btn btn-danger delete-minutes" data-id="${meeting.id}">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          ` : `
+            <button class="btn btn-success create-minutes" data-id="${meeting.id}">
+              <i class="fas fa-plus"></i> Create Minutes
+            </button>
+          `}
         </div>
       </td>
     `;
     tbl.appendChild(row);
   });
 
-  // Add event listeners to buttons
+  // Add event listeners to all buttons
   document.querySelectorAll('.view-minutes').forEach(btn => {
     btn.addEventListener('click', () => showMinutesDetails(btn.dataset.id));
   });
 
   document.querySelectorAll('.edit-minutes').forEach(btn => {
     btn.addEventListener('click', () => {
-      window.location.href = `/minutes?meeting=${btn.dataset.id}`;
+      const meetingId = btn.dataset.id;
+      const meeting = allMeetings.find(m => m.id == meetingId);
+      const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
+      window.location.href = `/minutes?meeting=${meetingId}&attendees=${attendees.join(',')}`;
+    });
+  });
+
+  document.querySelectorAll('.create-minutes').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const meetingId = btn.dataset.id;
+      const meeting = allMeetings.find(m => m.id == meetingId);
+      const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
+      window.location.href = `/minutes?meeting=${meetingId}&attendees=${attendees.join(',')}`;
     });
   });
 
@@ -88,6 +115,7 @@ function renderMeetingsTable() {
   });
 }
 
+// Update showMinutesDetails to show richer information
 function showMinutesDetails(meetingId) {
   const meeting = allMeetings.find(m => m.id == meetingId);
   if (!meeting) {
@@ -95,98 +123,95 @@ function showMinutesDetails(meetingId) {
     return;
   }
 
-  fetch(`/api/minutes?meeting_id=${meetingId}`, { headers: getAuthHeaders() })
-    .then(res => res.json())
-    .then(minutes => {
-      const minute = Array.isArray(minutes) ? minutes[0] : minutes;
-      if (!minute) {
-        showToast('No minutes found for this meeting!', 'error');
-        return;
-      }
+  const minute = allMinutes.find(m => m.meeting_id == meetingId);
+  if (!minute) {
+    showToast('No minutes found for this meeting!', 'error');
+    return;
+  }
 
-      const detail = document.getElementById('minutes-detail');
-      detail.style.display = 'block';
-      detail.dataset.meetingId = meetingId;
-      detail.scrollIntoView({ behavior: 'smooth' });
+  const detail = document.getElementById('minutes-detail');
+  detail.style.display = 'block';
+  detail.dataset.meetingId = meetingId;
+  detail.scrollIntoView({ behavior: 'smooth' });
 
-      // Populate details
-      document.getElementById('detail-title').textContent = meeting.title;
-      document.getElementById('detail-date').textContent = formatMeetingDateTime(meeting.start_time);
+  // Populate details
+  document.getElementById('detail-title').textContent = meeting.title;
+  document.getElementById('detail-date').textContent = formatMeetingDateTime(meeting.start_time);
 
-      // Format attendees
-      const attendeeNames = minute.attendees.map(attendeeId => {
-        const user = allUsers.find(u => u.id == attendeeId);
-        return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
-      }).join(', ');
-      document.getElementById('detail-attendees').textContent = attendeeNames;
+  // Format attendees
+  const attendeeNames = minute.attendees.map(attendeeId => {
+    const user = allUsers.find(u => u.id == attendeeId);
+    return user ? `${user.first_name} ${user.last_name}` : 'Unknown';
+  }).join(', ');
+  document.getElementById('detail-attendees').textContent = attendeeNames;
 
-      // Format agenda
-      document.getElementById('detail-agenda').innerHTML = 
-        minute.agenda?.replace(/\n/g, '<br>') || '<em>No agenda</em>';
+  // Format agenda
+  document.getElementById('detail-agenda').innerHTML = 
+    minute.agenda?.replace(/\n/g, '<br>') || '<em>No agenda</em>';
 
-      // Format discussion points
-      const discussionDiv = document.getElementById('detail-discussion');
-      discussionDiv.innerHTML = '';
-      if (minute.discussion_points?.length) {
-        minute.discussion_points.forEach(point => {
-          const pointDiv = document.createElement('div');
-          pointDiv.className = 'discussion-point';
-          pointDiv.innerHTML = `
-            <h4>${point.topic || 'Untitled discussion'}</h4>
-            <p>${point.details || 'No details provided'}</p>
-          `;
-          discussionDiv.appendChild(pointDiv);
-        });
-      } else {
-        discussionDiv.innerHTML = '<p><em>No discussion points</em></p>';
-      }
-
-      // Format action items
-      const actionsTable = document.getElementById('detail-actions');
-      actionsTable.innerHTML = '';
-      if (minute.action_items?.length) {
-        minute.action_items.forEach(item => {
-          const assignee = allUsers.find(u => u.id == item.assignee_id);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${item.action}</td>
-            <td>${assignee ? `${assignee.first_name} ${assignee.last_name}` : 'Unassigned'}</td>
-            <td>${item.due_date}</td>
-            <td><span class="status-badge ${item.status}">${item.status}</span></td>
-          `;
-          actionsTable.appendChild(tr);
-        });
-      } else {
-        actionsTable.innerHTML = '<tr><td colspan="4"><em>No action items</em></td></tr>';
-      }
-
-      // Format notes
-      document.getElementById('detail-notes').innerHTML = 
-        minute.notes?.replace(/\n/g, '<br>') || '<em>No additional notes</em>';
-
-      // Format attachments
-      const attachmentsDiv = document.getElementById('detail-attachments');
-      attachmentsDiv.innerHTML = '';
-      if (minute.attachments?.length) {
-        minute.attachments.forEach(file => {
-          const fileDiv = document.createElement('div');
-          fileDiv.className = 'attachment';
-          fileDiv.innerHTML = `
-            <i class="fas ${getFileIcon(file.name)}"></i> ${file.name}
-            <a href="#" class="download-attachment" data-file="${file.name}">
-              <i class="fas fa-download"></i> Download
-            </a>
-          `;
-          attachmentsDiv.appendChild(fileDiv);
-        });
-      } else {
-        attachmentsDiv.innerHTML = '<p><em>No attachments</em></p>';
-      }
-    })
-    .catch(err => {
-      console.error('Error loading minute details:', err);
-      showToast('Failed to load minute details', 'error');
+  // Format discussion points
+  const discussionDiv = document.getElementById('detail-discussion');
+  discussionDiv.innerHTML = '';
+  if (minute.discussion_points?.length) {
+    minute.discussion_points.forEach((point, index) => {
+      const pointDiv = document.createElement('div');
+      pointDiv.className = 'discussion-point';
+      pointDiv.innerHTML = `
+        <h4>${index + 1}. ${point.topic || 'Untitled discussion'}</h4>
+        <p>${point.details || 'No details provided'}</p>
+      `;
+      discussionDiv.appendChild(pointDiv);
     });
+  } else {
+    discussionDiv.innerHTML = '<p><em>No discussion points</em></p>';
+  }
+
+  // Format action items
+  const actionsTable = document.getElementById('detail-actions');
+  actionsTable.innerHTML = '';
+  if (minute.action_items?.length) {
+    minute.action_items.forEach(item => {
+      const assignee = allUsers.find(u => u.id == item.assignee_id);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.action}</td>
+        <td>${assignee ? `${assignee.first_name} ${assignee.last_name}` : 'Unassigned'}</td>
+        <td>${item.due_date || 'Not set'}</td>
+        <td><span class="status-badge ${item.status}">${formatStatus(item.status)}</span></td>
+      `;
+      actionsTable.appendChild(tr);
+    });
+  } else {
+    actionsTable.innerHTML = '<tr><td colspan="4"><em>No action items</em></td></tr>';
+  }
+
+  // Format notes
+  document.getElementById('detail-notes').innerHTML = 
+    minute.notes?.replace(/\n/g, '<br>') || '<em>No additional notes</em>';
+
+  // Format attachments
+  const attachmentsDiv = document.getElementById('detail-attachments');
+  attachmentsDiv.innerHTML = '';
+  if (minute.attachments?.length) {
+    minute.attachments.forEach(file => {
+      const fileDiv = document.createElement('div');
+      fileDiv.className = 'attachment';
+      fileDiv.innerHTML = `
+        <i class="fas ${getFileIcon(file.name)}"></i> ${file.name}
+        <span class="file-size">(${formatFileSize(file.size)})</span>
+      `;
+      attachmentsDiv.appendChild(fileDiv);
+    });
+  } else {
+    attachmentsDiv.innerHTML = '<p><em>No attachments</em></p>';
+  }
+}
+
+function formatStatus(status) {
+  if (!status) return 'Pending';
+  return status.split('-').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 }
 
 function confirmDeleteMinutes(meetingId) {

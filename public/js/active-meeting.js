@@ -190,26 +190,53 @@ function setupMeetingControls() {
     showMeetingDetails();
   });
 
-  // End Meeting Button
-  document.getElementById('end-meeting').addEventListener('click', async () => {
-    const shouldEnd = await showModal({
-      title: 'End Meeting',
-      message: 'Are you sure you want to end this meeting?',
-      showCancel: true,
-      confirmText: 'End Meeting',
-      cancelText: 'Continue Meeting'
+// Final version of the End Meeting button handler:
+document.getElementById('end-meeting').addEventListener('click', async () => {
+  if (!meeting) {
+    showToast('Meeting data not loaded yet', 'error');
+    return;
+  }
+
+  const shouldEnd = await showModal({
+    title: 'End Meeting',
+    message: 'Are you sure you want to end this meeting and create minutes?',
+    showCancel: true,
+    confirmText: 'End Meeting',
+    cancelText: 'Continue Meeting'
+  });
+  
+  if (shouldEnd) {
+    // Clear the meeting timer
+    clearInterval(timerInterval);
+    
+    // Pass meeting ID and attendees to minutes page
+    const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
+    const queryParams = new URLSearchParams({
+      meeting: meeting.id,
+      attendees: attendees.join(','),
+      ended: 'true' // Add flag to indicate this is an ended meeting
     });
     
-    if (shouldEnd) {
-      clearInterval(timerInterval);
-      window.location.href = `/minutes?meeting=${meeting.id}`;
-    }
-  });
+    window.location.href = `/minutes?${queryParams.toString()}`;
+  }
+});
 
-  // Take Notes Button
-  document.getElementById('take-notes').addEventListener('click', () => {
-    window.location.href = `/minutes?meeting=${meeting.id}`;
+// In active-meeting.js, update the take notes button handler:
+document.getElementById('take-notes').addEventListener('click', () => {
+  if (!meeting) {
+    showToast('Meeting data not loaded yet', 'error');
+    return;
+  }
+  
+  // Pass meeting ID and attendees to minutes page
+  const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
+  const queryParams = new URLSearchParams({
+    meeting: meeting.id,
+    attendees: attendees.join(',')
   });
+  
+  window.location.href = `/minutes?${queryParams.toString()}`;
+});
 
   // Recording Button
   document.getElementById('start-recording').addEventListener('click', toggleRecording);

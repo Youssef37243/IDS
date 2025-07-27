@@ -27,7 +27,6 @@
       <div id="upcoming-meetings"></div>
     </div>
 
-    <!-- Add this to your dashboard HTML -->
 <div id="confirmation-modal" class="modal hidden">
   <div class="modal-content">
     <h2 id="confirmation-title">Confirm Action</h2>
@@ -40,6 +39,7 @@
 </div>
   </main>
 
+  <script src="{{ asset('js/script.js') }}"></script>
   <script src="{{ asset('js/dash.js') }}"></script>
   <script src="{{ asset('js/header.js') }}"></script>
 

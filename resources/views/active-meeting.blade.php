@@ -54,7 +54,6 @@
       </div>
       
       <div class="meeting-actions">
-        <button id="take-notes" class="btn btn-secondary"><i class="fas fa-edit"></i> Take Notes</button>
         <button id="share-screen" class="btn btn-secondary"><i class="fas fa-desktop"></i> Share Screen</button>
         <button id="invite-participant" class="btn btn-secondary"><i class="fas fa-user-plus"></i> Invite Participant</button>
         <button id="join-video" class="btn btn-success"><i class="fas fa-video"></i> Join Video Call</button>

@@ -1,16 +1,25 @@
 function initMinutes() {
   const urlParams = new URLSearchParams(window.location.search);
   const meetingId = urlParams.get('meeting');
+  const attendeeIds = urlParams.get('attendees')?.split(',') || [];
 
   if (meetingId) {
-    loadMeetingData(meetingId);
+    // Check if this is an ended meeting (we might want to treat it differently)
+    const isEndedMeeting = urlParams.has('ended');
+    
+    loadMeetingData(meetingId, attendeeIds);
+    
+    // If this is an ended meeting, show a toast notification
+    if (isEndedMeeting) {
+      showToast('Meeting ended. Please complete the minutes.', 'info');
+    }
   } else {
     // Set default date for new minutes
     const minutesDateInput = document.getElementById('minutes-date');
     if (minutesDateInput) {
       minutesDateInput.value = new Date().toISOString().split('T')[0];
     }
-    loadAttendees();
+    loadAttendees([]); // Pass empty array if no specific attendees
   }
 
   // Form submission
@@ -104,13 +113,14 @@ function initMinutes() {
   });
 }
 
-async function loadMeetingData(meetingId) {
+async function loadMeetingData(meetingId, attendeeIds) {
   try {
     const [meetingRes, minutesRes, usersRes] = await Promise.all([
       fetch(`/api/meetings/${meetingId}`, { headers: getAuthHeaders() }),
       fetch(`/api/minutes?meeting_id=${meetingId}`, { headers: getAuthHeaders() }),
       fetch('/api/users', { headers: getAuthHeaders() })
     ]);
+    
     if (!meetingRes.ok || !minutesRes.ok || !usersRes.ok) throw new Error('Failed to load data');
 
     const meeting = await meetingRes.json();
@@ -118,6 +128,14 @@ async function loadMeetingData(meetingId) {
     const usersData = await usersRes.json();
     const users = usersData.data || usersData;
     const minute = Array.isArray(minutesArr) && minutesArr.length > 0 ? minutesArr[0] : null;
+
+    // Filter users to only include meeting attendees
+    const meetingAttendees = attendeeIds.length > 0 
+      ? users.filter(user => attendeeIds.includes(String(user.id)))
+      : users;
+
+    // Store attendees for action items dropdown
+    localStorage.setItem('meetingAttendees', JSON.stringify(meetingAttendees));
 
     // Set meeting title
     const titleElem = document.getElementById('minutes-title');
@@ -130,25 +148,18 @@ async function loadMeetingData(meetingId) {
     const attendeesSelect = document.getElementById('minutes-attendees');
     if (attendeesSelect) {
       attendeesSelect.innerHTML = '';
-      users.forEach(user => {
+      meetingAttendees.forEach(user => {
         const option = document.createElement('option');
         option.value = user.id;
         option.textContent = `${user.first_name} ${user.last_name} (${user.email})`;
+        option.selected = attendeeIds.includes(String(user.id));
         attendeesSelect.appendChild(option);
-      });
-      const selectedAttendees = (minute && minute.attendees) || meeting.attendees?.map(a => a.user_id || a) || [];
-      attendeesSelect.value = null;
-      // For multiple select
-      Array.from(attendeesSelect.options).forEach(opt => {
-        opt.selected = selectedAttendees.includes(opt.value) || selectedAttendees.includes(Number(opt.value));
       });
     }
 
     const agendaInput = document.getElementById('minutes-agenda');
     if (agendaInput) agendaInput.value = minute ? minute.agenda : meeting.agenda || '';
 
-    // Discussion points
-    const discussionPointsContainer = document.getElementById('discussion-points');
     if (discussionPointsContainer) {
       discussionPointsContainer.innerHTML = '';
       if (minute && minute.discussionPoints?.length) {
@@ -211,36 +222,50 @@ async function loadMeetingData(meetingId) {
     const notesInput = document.getElementById('minutes-notes');
     if (notesInput) notesInput.value = minute ? minute.notes : '';
 
-  } catch (err) {
-    console.error('Error loading meeting data:', err);
-    // You can show an error UI here if needed
+  } catch (error) {
+    console.error('Error loading meeting data:', error);
+    showToast('Failed to load meeting data', 'error');
   }
 }
 
-async function loadAttendees() {
-  try {
-    const response = await fetch('/api/users', { headers: getAuthHeaders() });
-    if (!response.ok) throw new Error('Failed to load users');
+function loadAttendees(attendeeIds) {
+  // If we have specific attendees, use those
+  const storedAttendees = JSON.parse(localStorage.getItem('meetingAttendees')) || [];
+  if (storedAttendees.length > 0) {
+    populateAttendeesDropdown(storedAttendees, attendeeIds);
+    return;
+  }
 
-    const data = await response.json();
-    const users = data.data || data;
-    const attendeesSelect = document.getElementById('minutes-attendees');
-    if (!attendeesSelect) return;
-
-    attendeesSelect.innerHTML = '';
-    users.forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = `${user.first_name} ${user.last_name} (${user.email})`;
-      attendeesSelect.appendChild(option);
+  // Otherwise load all users (for cases where minutes are created directly)
+  fetch('/api/users', { headers: getAuthHeaders() })
+    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(data => {
+      const users = data.data || data;
+      populateAttendeesDropdown(users, attendeeIds);
+    })
+    .catch(err => {
+      console.error('Error loading users:', err);
+      showToast('Failed to load attendees', 'error');
     });
-  } catch (err) {
-    console.error(err);
-  }
 }
 
-function getAttendeeOptions(selectedId = null, usersList = null) {
-  const users = usersList || JSON.parse(localStorage.getItem('users')) || [];
+function populateAttendeesDropdown(users, selectedIds = []) {
+  const attendeesSelect = document.getElementById('minutes-attendees');
+  if (!attendeesSelect) return;
+
+  attendeesSelect.innerHTML = '';
+  users.forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.id;
+    option.textContent = `${user.first_name} ${user.last_name} (${user.email})`;
+    option.selected = selectedIds.includes(String(user.id));
+    attendeesSelect.appendChild(option);
+  });
+}
+
+// Update getAttendeeOptions to use meeting attendees
+function getAttendeeOptions(selectedId = null) {
+  const users = JSON.parse(localStorage.getItem('meetingAttendees')) || [];
   let options = '<option value="">Select Assignee</option>';
   users.forEach(user => {
     const isSelected = String(user.id) === String(selectedId) ? 'selected' : '';
@@ -311,54 +336,56 @@ function saveMinutes(meetingId, isDraft = false) {
     }
   });
 
-  // Gather attachments
-  const attachments = [];
-  const attachmentsInput = document.getElementById('minutes-attachments');
-  if (attachmentsInput && attachmentsInput.files) {
-    for (let i = 0; i < attachmentsInput.files.length; i++) {
-      const file = attachmentsInput.files[i];
-      attachments.push({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
-    }
-  }
+  // Gather attendees
+  const attendees = Array.from(document.getElementById('minutes-attendees').selectedOptions)
+    .map(opt => opt.value);
 
   // Build minutes object
   const minutes = {
-    meeting_id: meetingId,
-    title: document.getElementById('minutes-title')?.textContent || '',
-    date: document.getElementById('minutes-date')?.value || '',
-    attendees: Array.from(document.getElementById('minutes-attendees')?.selectedOptions || []).map(opt => opt.value),
+    meeting_id: meetingId || null,
+    title: document.getElementById('minutes-title')?.textContent || 'Meeting Minutes',
+    date: document.getElementById('minutes-date')?.value || new Date().toISOString().split('T')[0],
+    attendees: attendees,
     agenda: document.getElementById('minutes-agenda')?.value || '',
-    discussionPoints,
-    actionItems,
+    discussionPoints: discussionPoints,
+    actionItems: actionItems,
     notes: document.getElementById('minutes-notes')?.value || '',
-    attachments,
-    isDraft,
-    lastUpdated: new Date().toISOString()
+    isDraft: isDraft
   };
 
-  fetch('/api/minutes', {
-    method: 'POST',
-    headers: Object.assign({
-      'Content-Type': 'application/json'
-    }, getAuthHeaders()),
+  // Add attachments if any
+  const attachmentsInput = document.getElementById('minutes-attachments');
+  if (attachmentsInput?.files?.length > 0) {
+    minutes.attachments = Array.from(attachmentsInput.files).map(file => ({
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+  }
+
+  const method = meetingId ? 'POST' : 'PUT';
+  const url = '/api/minutes' + (meetingId ? '' : `/${meetingId}`);
+
+  fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
     body: JSON.stringify(minutes)
   })
-    .then(res => {
-      if (!res.ok) return res.json().then(data => Promise.reject(data));
-      return res.json();
-    })
-    .then(() => {
-      showToast(isDraft ? 'Draft saved!' : 'Minutes finalized and saved!', 'success');
-      setTimeout(() => window.location.href = '/review', 1000);
-    })
-    .catch(err => {
-      const msg = err.message || 'Unknown error';
-      showToast('Failed to save minutes: ' + msg, 'error');
-    });
+  .then(response => {
+    if (!response.ok) return response.json().then(err => Promise.reject(err));
+    return response.json();
+  })
+  .then(data => {
+    showToast('Minutes saved successfully!', 'success');
+    setTimeout(() => window.location.href = '/review', 1500);
+  })
+  .catch(error => {
+    console.error('Error saving minutes:', error);
+    showToast(`Failed to save minutes: ${error.message || 'Unknown error'}`, 'error');
+  });
 }
 
 function getFileIcon(filename) {
