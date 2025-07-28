@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card no-guest">
       <div class="card-header">
         <h2>Room Availability</h2>
         <div class="availability-controls">
