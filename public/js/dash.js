@@ -79,25 +79,24 @@ function setAdminStat(elementId, value) {
   }
 }
 
-// Update initDashboard to check for admin role properly
 function initDashboard() {
   const currentUser = getCurrentUser();
   
-  loadUpcomingMeetings();
-  setupEventListeners();
-  
-  // Check if user is admin
-  if (currentUser?.role === 'admin') {
-    showAdminDashboard();
+  if (!currentUser) {
+    window.location.href = '/login';
+    return;
   }
-}
 
-function initDashboard() {
+  // Hide quick actions for guests
+  if (currentUser.role === 'guest') {
+    const quickActions = document.querySelector('.quick-actions');
+    if (quickActions) quickActions.style.display = 'none';
+  }
+
   loadUpcomingMeetings();
   setupEventListeners();
   
   // Check if user is admin
-  const currentUser = getCurrentUser();
   if (currentUser?.role === 'admin') {
     showAdminDashboard();
   }
@@ -134,14 +133,26 @@ function renderMeetings(meetings) {
     return;
   }
 
-  // Filter and sort meetings
+  // Filter meetings based on user role
   const now = new Date();
-  const upcomingMeetings = meetings
-    .filter(meeting => new Date(meeting.end_time) > now)
-    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  let upcomingMeetings = meetings
+    .filter(meeting => new Date(meeting.end_time) > now);
+
+  // For guests, only show meetings they're invited to
+  if (currentUser.role === 'guest') {
+    upcomingMeetings = upcomingMeetings.filter(meeting => 
+      meeting.attendees?.some(a => a.user_id === currentUser.id)
+    );
+  }
+
+  // Sort meetings
+  upcomingMeetings.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
   if (!upcomingMeetings.length) {
-    list.innerHTML = '<p>No upcoming meetings. Schedule one now!</p>';
+    const message = currentUser.role === 'guest' 
+      ? 'No upcoming meetings you are invited to.' 
+      : 'No upcoming meetings. Schedule one now!';
+    list.innerHTML = `<p>${message}</p>`;
     return;
   }
 
@@ -154,6 +165,9 @@ function renderMeetings(meetings) {
 function createMeetingElement(meeting, currentUser) {
   const isOrganizer = meeting.user_id === currentUser.id;
   const isAttendee = meeting.attendees?.some(a => a.user_id === currentUser.id);
+  
+  // For guests, they can only be attendees
+  const showActions = currentUser.role !== 'guest' || isAttendee;
   
   const div = document.createElement('div');
   div.className = 'meeting-card';
@@ -174,11 +188,12 @@ function createMeetingElement(meeting, currentUser) {
       <p><i class="fas fa-user"></i> Organized by: ${meeting.user?.first_name} ${meeting.user?.last_name}</p>
       ${meeting.agenda ? `<p><i class="fas fa-clipboard"></i> ${meeting.agenda}</p>` : ''}
     </div>
+    ${showActions ? `
     <div class="meeting-actions">
       <button class="btn btn-primary join-meeting" data-id="${meeting.id}">
         <i class="fas fa-video"></i> Join
       </button>
-      ${isOrganizer ? `
+      ${isOrganizer && currentUser.role !== 'guest' ? `
         <button class="btn btn-warning edit-meeting" data-id="${meeting.id}">
           <i class="fas fa-edit"></i> Edit
         </button>
@@ -189,6 +204,7 @@ function createMeetingElement(meeting, currentUser) {
         </button>
       ` : ''}
     </div>
+    ` : ''}
   `;
   
   return div;

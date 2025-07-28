@@ -53,7 +53,7 @@ localStorage.setItem('currentUser', JSON.stringify(response.user));
           if (role === 'admin') {
             redirectWithFallback('/dashboard');
           } else if (role === 'guest') {
-            redirectWithFallback('/guest-dashboard');
+            redirectWithFallback('/dashboard');
           } else {
             redirectWithFallback('/dashboard');
           }

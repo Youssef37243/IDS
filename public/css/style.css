@@ -1504,3 +1504,15 @@ body.modal-open {
 #minutes-detail .discussion-point:last-child {
   border-bottom: none;
 }
+
+.role-guest .action-card {
+  display: none;
+}
+
+.role-guest .edit-meeting {
+  display: none;
+}
+
+.role-guest .no-guest {
+  display: none;
+}

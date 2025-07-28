@@ -60,7 +60,14 @@ async function loadRooms() {
     rooms.forEach(room => {
       const option = document.createElement('option');
       option.value = room.id;
-      option.textContent = `${room.name} (Capacity: ${room.capacity}) (Location: ${room.location})`;
+      
+      // Create equipment display text
+      let equipmentText = '';
+      if (room.feature && room.feature !== 'None') {
+        equipmentText = ` (Equipment: ${room.feature})`;
+      }
+      
+      option.textContent = `${room.name} (Capacity: ${room.capacity}) (Location: ${room.location})${equipmentText}`;
       roomSelect.appendChild(option);
     });
   } catch (error) {

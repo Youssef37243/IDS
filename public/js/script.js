@@ -110,14 +110,25 @@ function updateUIForUser() {
   const guestOnly = document.querySelectorAll('.guest-only');
   const adminOnly = document.querySelectorAll('.admin-only');
 
+  // Clear all role classes first
+  document.body.classList.remove('role-guest', 'role-admin', 'role-user');
+
   if (currentUser) {
     authOnly.forEach(el => el.style.display = 'block');
     guestOnly.forEach(el => el.style.display = 'none');
+    
+    // Add role-specific class to body
     if (currentUser.role === 'admin') {
+      document.body.classList.add('role-admin');
       adminOnly.forEach(el => el.style.display = 'block');
+    } else if (currentUser.role === 'guest') {
+      document.body.classList.add('role-guest');
+      adminOnly.forEach(el => el.style.display = 'none');
     } else {
+      document.body.classList.add('role-user');
       adminOnly.forEach(el => el.style.display = 'none');
     }
+    
     const userName = document.getElementById('user-name');
     const userRole = document.getElementById('user-role');
     if (userName) userName.textContent = `${currentUser.first_name} ${currentUser.last_name}`;

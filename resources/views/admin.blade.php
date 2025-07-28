@@ -91,6 +91,7 @@
               <option value="" disabled selected>Select a role</option>
               <option value="user">User</option>
               <option value="admin">Admin</option>
+              <option value="guest">Guest</option>
             </select>
           </div>
             <button type="submit" class="btn btn-primary">Add User</button>

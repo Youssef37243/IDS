@@ -32,7 +32,7 @@ function renderHeader(currentUser) {
           const logoutLi = logoutBtn?.closest('li');
           if (logoutLi) {
             const profileLi = document.createElement('li');
-            profileLi.className = 'auth-only'; // Add auth-only class
+            profileLi.className = 'auth-only no-guest'; // Add auth-only class
             profileLi.innerHTML = `<a href="#" id="profile-link"><i class="fas fa-user"></i> Profile</a>`;
             logoutLi.parentNode.insertBefore(profileLi, logoutLi);
           }

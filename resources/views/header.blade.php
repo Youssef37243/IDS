@@ -22,10 +22,10 @@
 
     <nav id="nav">
     <ul>
-        <li class="auth-only"><a href="/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
-        <li class="auth-only"><a href="/booking"><i class="fas fa-calendar-plus"></i> Book Meeting</a></li>
-        <li class="auth-only"><a href="/review"><i class="fas fa-file-alt"></i> Minutes</a></li>
-        <li class="admin-only"><a href="/admin"><i class="fas fa-cog"></i> Admin</a></li>
+        <li class="auth-only no-guest"><a href="/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li class="auth-only no-guest"><a href="/booking"><i class="fas fa-calendar-plus"></i> Book Meeting</a></li>
+        <li class="auth-only no-guest"><a href="/review"><i class="fas fa-file-alt"></i> Minutes</a></li>
+        <li class="admin-only no-guest"><a href="/admin"><i class="fas fa-cog"></i> Admin</a></li>
         <li class="auth-only"><a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
     </ul>
     </nav>

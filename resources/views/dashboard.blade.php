@@ -10,7 +10,7 @@
     <div id="header"></div>
 
   <main class="container">
-    <div class="card">
+    <div class="card action-card">
       <div class="card-header">
         <h2>Quick Actions</h2>
       </div>
