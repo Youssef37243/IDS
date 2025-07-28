@@ -228,17 +228,6 @@ function setupEventListeners() {
     });
   }
 
-  // Room availability controls
-  const periodSelect = document.getElementById('availability-period');
-  if (periodSelect) {
-    periodSelect.addEventListener('change', loadRoomAvailability);
-  }
-
-  const refreshBtn = document.getElementById('refresh-availability');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadRoomAvailability);
-  }
-  
   // Meeting actions (delegated events)
   document.addEventListener('click', (e) => {
     const joinBtn = e.target.closest('.join-meeting');
