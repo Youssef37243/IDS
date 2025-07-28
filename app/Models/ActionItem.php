@@ -10,16 +10,26 @@ class ActionItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'minute_id',
-        'description',
+        'assignee_id',
+        'action',
         'due_date',
-        'status'
+        'status',
+        'description'
     ];
+
+    protected $casts = [
+        'due_date' => 'date'
+    ];
+
+    public function assignee()
+    {
+        return $this->belongsTo(User::class, 'assignee_id');
+    }
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'assignee_id');
     }
 
     public function minute()

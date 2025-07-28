@@ -27,6 +27,34 @@ class MeetingController extends Controller
         return response()->json($meetings);
     }
 
+    public function showActiveMeeting(Request $request)
+    {
+        $meetingId = $request->query('id');
+        
+        if (!$meetingId) {
+            return redirect('/dashboard')->with('error', 'No meeting ID provided');
+        }
+
+        $user = $request->user();
+        
+        // Check if user is authorized to join this meeting
+        $meeting = Meeting::with(['room', 'user', 'attendees.user'])
+            ->where('id', $meetingId)
+            ->where(function($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->orWhereHas('attendees', function($q) use ($user) {
+                        $q->where('user_id', $user->id);
+                    });
+            })
+            ->first();
+
+        if (!$meeting) {
+            return redirect('/dashboard')->with('error', 'Meeting not found or access denied');
+        }
+
+        return view('active-meeting');
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -103,10 +131,20 @@ class MeetingController extends Controller
 
     public function show(Meeting $meeting)
     {
-        $meeting = $meeting->load(['room', 'user', 'attendees']);
-        $meetingArray = $meeting->toArray();
-        $meetingArray['attendees'] = collect($meeting->attendees)->pluck('user_id')->toArray();
-        return response()->json($meetingArray);
+        // Load meeting with related data including attendees
+        $meeting->load([
+            'room',
+            'user',
+            'attendees.user'
+        ]);
+        
+        return response()->json($meeting);
+    }
+
+    public function attendees(Meeting $meeting)
+    {
+        $attendees = $meeting->attendees()->with('user')->get();
+        return response()->json($attendees);
     }
 
     public function update(Request $request, Meeting $meeting)

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MeetingController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -14,10 +15,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/rooms-availability', [\App\Http\Controllers\RoomController::class, 'availability']);
     Route::get('/rooms/{room}/availability', [\App\Http\Controllers\RoomController::class, 'roomAvailability']);
 
-Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class)
-    ->parameters(['meetings' => 'meeting']);
+    Route::apiResource('meetings', MeetingController::class)
+        ->parameters(['meetings' => 'meeting']);
 
-Route::get('/meetings/{meeting}/attendees', [MeetingController::class, 'attendees']);
+    Route::get('/meetings/{meeting}/attendees', [MeetingController::class, 'attendees']);
 
     Route::apiResource('attendees', \App\Http\Controllers\AttendeeController::class);
     Route::apiResource('minutes', \App\Http\Controllers\MinuteController::class);

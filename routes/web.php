@@ -1,22 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MinuteController;
 
 Route::get('/', function () {
     if (auth()->check()) {
-
         return redirect('/dashboard');
     }
     return view('welcome');
 });
 
-// In routes/web.php
+// Authentication required routes
+Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
 
-    // Add missing routes for all Blade views
     Route::get('/booking', function () {
         return view('booking');
     })->name('booking');
@@ -33,24 +33,26 @@ Route::get('/', function () {
         return view('profile');
     })->name('profile');
 
-    Route::get('/admin', function () {
-        return view('admin');
-    })->name('admin');
+    Route::get('/active-meeting', [MeetingController::class, 'showActiveMeeting'])->name('active-meeting');
 
-    Route::get('/active-meeting', function () {
-        return view('active-meeting');
-    })->name('active-meeting');
+    // Admin routes
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin', function () {
+            return view('admin');
+        })->name('admin');
+    });
+});
 
-    // Guest dashboard route
-    Route::get('/guest-dashboard', function () {
-        return view('guest-dashboard');
-    })->name('guest.dashboard');
+// Guest dashboard route (no auth required)
+Route::get('/guest-dashboard', function () {
+    return view('guest-dashboard');
+})->name('guest.dashboard');
 
 Route::get('/login', function () {
     if (auth()->check()) {
-        if (auth()->user() === 'admin') {
+        if (auth()->user()->role === 'admin') {
             return redirect('/admin');
-        } elseif (auth()->user() === 'guest') {
+        } elseif (auth()->user()->role === 'guest') {
             return redirect('/guest-dashboard');
         }
         return redirect('/dashboard');

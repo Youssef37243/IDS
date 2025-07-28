@@ -15,7 +15,16 @@ class Meeting extends Model
         'start_time',
         'end_time',
         'title',
-        'agenda'
+        'agenda',
+        'recurring',
+        'video_conference'
+    ];
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'recurring' => 'boolean',
+        'video_conference' => 'boolean'
     ];
 
     public function room()

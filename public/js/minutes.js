@@ -2,16 +2,17 @@ function initMinutes() {
   const urlParams = new URLSearchParams(window.location.search);
   const meetingId = urlParams.get('meeting');
   const attendeeIds = urlParams.get('attendees')?.split(',') || [];
+  const isEdit = urlParams.has('edit');
+  const isEndedMeeting = urlParams.has('ended');
 
   if (meetingId) {
-    // Check if this is an ended meeting (we might want to treat it differently)
-    const isEndedMeeting = urlParams.has('ended');
-    
     loadMeetingData(meetingId, attendeeIds);
     
-    // If this is an ended meeting, show a toast notification
+    // Show appropriate notifications
     if (isEndedMeeting) {
       showToast('Meeting ended. Please complete the minutes.', 'info');
+    } else if (isEdit) {
+      showToast('Editing existing minutes.', 'info');
     }
   } else {
     // Set default date for new minutes
@@ -121,7 +122,14 @@ async function loadMeetingData(meetingId, attendeeIds) {
       fetch('/api/users', { headers: getAuthHeaders() })
     ]);
     
-    if (!meetingRes.ok || !minutesRes.ok || !usersRes.ok) throw new Error('Failed to load data');
+    // Check for authentication issues
+    if (meetingRes.status === 401 || minutesRes.status === 401 || usersRes.status === 401) {
+      throw new Error('Authentication failed');
+    }
+    
+    if (!meetingRes.ok || !minutesRes.ok || !usersRes.ok) {
+      throw new Error(`Failed to load data: Meeting ${meetingRes.status}, Minutes ${minutesRes.status}, Users ${usersRes.status}`);
+    }
 
     const meeting = await meetingRes.json();
     const minutesArr = await minutesRes.json();
@@ -224,7 +232,14 @@ async function loadMeetingData(meetingId, attendeeIds) {
 
   } catch (error) {
     console.error('Error loading meeting data:', error);
-    showToast('Failed to load meeting data', 'error');
+    if (error.message.includes('Authentication failed')) {
+      showToast('Session expired. Please log in again.', 'error');
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      setTimeout(() => window.location.href = '/login', 1000);
+    } else {
+      showToast(error.message || 'Failed to load meeting data', 'error');
+    }
   }
 }
 
@@ -338,7 +353,7 @@ function saveMinutes(meetingId, isDraft = false) {
 
   // Gather attendees
   const attendees = Array.from(document.getElementById('minutes-attendees').selectedOptions)
-    .map(opt => opt.value);
+    .map(opt => parseInt(opt.value));
 
   // Build minutes object
   const minutes = {
@@ -363,8 +378,20 @@ function saveMinutes(meetingId, isDraft = false) {
     }));
   }
 
-  const method = meetingId ? 'POST' : 'PUT';
-  const url = '/api/minutes' + (meetingId ? '' : `/${meetingId}`);
+  // Check if we're editing existing minutes
+  const urlParams = new URLSearchParams(window.location.search);
+  const isEdit = urlParams.has('edit');
+  
+  let method = 'POST';
+  let url = '/api/minutes';
+  
+  if (isEdit && meetingId) {
+    // For editing, we need to find the existing minute ID
+    // This would ideally be passed as a parameter or fetched
+    // For now, we'll use POST to create new or update existing
+    method = 'POST';
+    url = '/api/minutes';
+  }
 
   fetch(url, {
     method,
@@ -375,16 +402,28 @@ function saveMinutes(meetingId, isDraft = false) {
     body: JSON.stringify(minutes)
   })
   .then(response => {
-    if (!response.ok) return response.json().then(err => Promise.reject(err));
+    if (response.status === 401) {
+      throw new Error('Authentication failed');
+    }
+    if (!response.ok) {
+      return response.json().then(err => Promise.reject(err));
+    }
     return response.json();
   })
   .then(data => {
-    showToast('Minutes saved successfully!', 'success');
+    showToast(isEdit ? 'Minutes updated successfully!' : 'Minutes saved successfully!', 'success');
     setTimeout(() => window.location.href = '/review', 1500);
   })
   .catch(error => {
     console.error('Error saving minutes:', error);
-    showToast(`Failed to save minutes: ${error.message || 'Unknown error'}`, 'error');
+    if (error.message && error.message.includes('Authentication failed')) {
+      showToast('Session expired. Please log in again.', 'error');
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      setTimeout(() => window.location.href = '/login', 1000);
+    } else {
+      showToast(`Failed to save minutes: ${error.message || 'Unknown error'}`, 'error');
+    }
   });
 }
 

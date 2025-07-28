@@ -96,8 +96,17 @@ function renderMeetingsTable() {
     btn.addEventListener('click', () => {
       const meetingId = btn.dataset.id;
       const meeting = allMeetings.find(m => m.id == meetingId);
-      const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
-      window.location.href = `/minutes?meeting=${meetingId}&attendees=${attendees.join(',')}`;
+      const minute = allMinutes.find(m => m.meeting_id == meetingId);
+      
+      // Use attendees from minutes if available, otherwise from meeting
+      let attendees = [];
+      if (minute && minute.attendees && Array.isArray(minute.attendees)) {
+        attendees = minute.attendees;
+      } else if (meeting.attendees) {
+        attendees = meeting.attendees.map(a => a.user_id || a.id);
+      }
+      
+      window.location.href = `/minutes?meeting=${meetingId}&attendees=${attendees.join(',')}&edit=true`;
     });
   });
 
@@ -226,11 +235,21 @@ function confirmDeleteMinutes(meetingId) {
 }
 
 function deleteMinutes(meetingId) {
-  fetch(`/api/minutes/${meetingId}`, {
+  // Find the minute ID for this meeting
+  const minute = allMinutes.find(m => m.meeting_id == meetingId);
+  if (!minute) {
+    showToast('No minutes found to delete', 'error');
+    return;
+  }
+
+  fetch(`/api/minutes/${minute.id}`, {
     method: 'DELETE',
     headers: getAuthHeaders()
   })
   .then(response => {
+    if (response.status === 401) {
+      throw new Error('Authentication failed');
+    }
     if (!response.ok) throw new Error('Failed to delete');
     return response.json();
   })
@@ -243,7 +262,14 @@ function deleteMinutes(meetingId) {
   })
   .catch(err => {
     console.error('Error deleting minutes:', err);
-    showToast('Failed to delete minutes', 'error');
+    if (err.message.includes('Authentication failed')) {
+      showToast('Session expired. Please log in again.', 'error');
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      setTimeout(() => window.location.href = '/login', 1000);
+    } else {
+      showToast('Failed to delete minutes', 'error');
+    }
   });
 }
 

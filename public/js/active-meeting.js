@@ -18,8 +18,28 @@ function initActiveMeeting() {
     return;
   }
 
+  // Check authentication first
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showToast('Please log in to access the meeting', 'error');
+    setTimeout(() => window.location.href = '/login', 1000);
+    return;
+  }
+
   fetch(`/api/meetings/${meetingId}`, { headers: getAuthHeaders() })
-    .then(res => res.ok ? res.json() : Promise.reject())
+    .then(res => {
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Authentication failed');
+        } else if (res.status === 404) {
+          throw new Error('Meeting not found');
+        } else if (res.status === 403) {
+          throw new Error('Access denied - you are not authorized to join this meeting');
+        }
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      return res.json();
+    })
     .then(data => {
       meeting = data;
       return Promise.all([
@@ -33,8 +53,15 @@ function initActiveMeeting() {
     })
     .catch((error) => {
       console.error('Error loading meeting:', error);
-      showToast('Failed to load meeting data', 'error');
-      setTimeout(() => window.location.href = '/dashboard', 1000);
+      if (error.message.includes('Authentication failed')) {
+        showToast('Session expired. Please log in again.', 'error');
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        setTimeout(() => window.location.href = '/login', 1000);
+      } else {
+        showToast(error.message || 'Failed to load meeting data', 'error');
+        setTimeout(() => window.location.href = '/dashboard', 1000);
+      }
     });
 }
 
@@ -140,10 +167,22 @@ function renderMeeting(meeting, users, rooms) {
   const room = rooms.find(r => r.id == meeting.room_id);
   document.getElementById('meeting-room').textContent = room ? room.name : 'Unknown Room';
 
+  // Handle attendees properly - they come with user relationship loaded
   const attendeeNames = (meeting.attendees || []).map(att => {
-    const user = users.find(u => u.id == (att.user_id || att));
-    return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+    if (att.user) {
+      return `${att.user.first_name} ${att.user.last_name}`;
+    } else {
+      // Fallback if user relationship not loaded
+      const user = users.find(u => u.id == (att.user_id || att.id));
+      return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+    }
   });
+
+  // Add the meeting organizer if not already in attendees
+  const organizer = users.find(u => u.id == meeting.user_id);
+  if (organizer && !attendeeNames.includes(`${organizer.first_name} ${organizer.last_name}`)) {
+    attendeeNames.unshift(`${organizer.first_name} ${organizer.last_name} (Organizer)`);
+  }
 
   document.getElementById('meeting-attendees').textContent = attendeeNames.join(', ');
   startMeetingTimer();
@@ -171,7 +210,6 @@ function setupMeetingControls() {
   const buttons = [
     'view-meeting-details',
     'end-meeting',
-    'take-notes',
     'start-recording',
     'share-screen',
     'invite-participant',
@@ -209,11 +247,26 @@ document.getElementById('end-meeting').addEventListener('click', async () => {
     // Clear the meeting timer
     clearInterval(timerInterval);
     
-    // Pass meeting ID and attendees to minutes page
-    const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
+    // Pass meeting ID and actual attendees who were in the meeting
+    let attendeeIds = [];
+    
+    // Add the organizer first
+    attendeeIds.push(meeting.user_id);
+    
+    // Add all attendees
+    if (meeting.attendees && meeting.attendees.length > 0) {
+      const attendeeUserIds = meeting.attendees.map(a => a.user_id || a.id);
+      // Filter out duplicates and add to list
+      attendeeUserIds.forEach(id => {
+        if (!attendeeIds.includes(id)) {
+          attendeeIds.push(id);
+        }
+      });
+    }
+    
     const queryParams = new URLSearchParams({
       meeting: meeting.id,
-      attendees: attendees.join(','),
+      attendees: attendeeIds.join(','),
       ended: 'true' // Add flag to indicate this is an ended meeting
     });
     
@@ -221,22 +274,40 @@ document.getElementById('end-meeting').addEventListener('click', async () => {
   }
 });
 
-// In active-meeting.js, update the take notes button handler:
-document.getElementById('take-notes').addEventListener('click', () => {
-  if (!meeting) {
-    showToast('Meeting data not loaded yet', 'error');
-    return;
-  }
-  
-  // Pass meeting ID and attendees to minutes page
-  const attendees = meeting.attendees?.map(a => a.user_id || a) || [];
-  const queryParams = new URLSearchParams({
-    meeting: meeting.id,
-    attendees: attendees.join(',')
+// Take notes button handler (if exists)
+const takeNotesBtn = document.getElementById('take-notes');
+if (takeNotesBtn) {
+  takeNotesBtn.addEventListener('click', () => {
+    if (!meeting) {
+      showToast('Meeting data not loaded yet', 'error');
+      return;
+    }
+    
+    // Pass meeting ID and actual attendees to minutes page
+    let attendeeIds = [];
+    
+    // Add the organizer first
+    attendeeIds.push(meeting.user_id);
+    
+    // Add all attendees
+    if (meeting.attendees && meeting.attendees.length > 0) {
+      const attendeeUserIds = meeting.attendees.map(a => a.user_id || a.id);
+      // Filter out duplicates and add to list
+      attendeeUserIds.forEach(id => {
+        if (!attendeeIds.includes(id)) {
+          attendeeIds.push(id);
+        }
+      });
+    }
+    
+    const queryParams = new URLSearchParams({
+      meeting: meeting.id,
+      attendees: attendeeIds.join(',')
+    });
+    
+    window.location.href = `/minutes?${queryParams.toString()}`;
   });
-  
-  window.location.href = `/minutes?${queryParams.toString()}`;
-});
+}
 
   // Recording Button
   document.getElementById('start-recording').addEventListener('click', toggleRecording);
@@ -282,6 +353,67 @@ document.getElementById('take-notes').addEventListener('click', () => {
 
   // Transcription Controls
   document.getElementById('toggle-transcription').addEventListener('click', toggleTranscription);
+}
+
+// Recording functionality
+function toggleRecording() {
+  isRecording = !isRecording;
+  const btn = document.getElementById('start-recording');
+  
+  if (isRecording) {
+    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-danger');
+    showToast('Recording started', 'success');
+  } else {
+    btn.innerHTML = '<i class="fas fa-record-vinyl"></i> Start Recording';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-primary');
+    showToast('Recording stopped', 'info');
+  }
+}
+
+// Transcription functionality
+function toggleTranscription() {
+  isTranscribing = !isTranscribing;
+  const btn = document.getElementById('toggle-transcription');
+  
+  if (isTranscribing) {
+    btn.innerHTML = '<i class="fas fa-microphone-slash"></i> Stop Transcription';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-danger');
+    showToast('Transcription started', 'success');
+    
+    // Simulate transcription
+    simulateTranscription();
+  } else {
+    btn.innerHTML = '<i class="fas fa-microphone"></i> Start Transcription';
+    btn.classList.remove('btn-danger');
+    btn.classList.add('btn-primary');
+    showToast('Transcription stopped', 'info');
+  }
+}
+
+function simulateTranscription() {
+  if (!isTranscribing) return;
+  
+  const transcriptionOutput = document.querySelector('.transcription-output p');
+  const sampleTexts = [
+    "Welcome everyone to today's meeting.",
+    "Let's start by reviewing the agenda items.",
+    "The first topic is the quarterly review.",
+    "We need to discuss the budget allocation.",
+    "Any questions about the project timeline?",
+    "Let's move on to the next item.",
+    "Thank you for your input on this matter."
+  ];
+  
+  if (transcriptionOutput) {
+    transcriptionOutput.textContent += " " + sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+    
+    // Continue transcription
+    setTimeout(simulateTranscription, 3000 + Math.random() * 5000);
+  }
 }
 
 // Enhanced Meeting Details Modal

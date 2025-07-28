@@ -12,9 +12,22 @@ class Minute extends Model
     protected $fillable = [
         'user_id',
         'meeting_id',
+        'title',
+        'date',
+        'attendees',
+        'agenda',
         'discussion_points',
+        'notes',
+        'attachments',
         'decisions',
         'summary_pdf'
+    ];
+
+    protected $casts = [
+        'attendees' => 'array',
+        'discussion_points' => 'array',
+        'attachments' => 'array',
+        'date' => 'datetime'
     ];
 
     public function user()
