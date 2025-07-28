@@ -11,6 +11,8 @@ Route::post('/jwt-login', [AuthController::class, 'jwtLogin']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', \App\Http\Controllers\UserController::class);
     Route::apiResource('rooms', \App\Http\Controllers\RoomController::class);
+    Route::get('/rooms-availability', [\App\Http\Controllers\RoomController::class, 'availability']);
+    Route::get('/rooms/{room}/availability', [\App\Http\Controllers\RoomController::class, 'roomAvailability']);
 
 Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class)
     ->parameters(['meetings' => 'meeting']);
