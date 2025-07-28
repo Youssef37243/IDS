@@ -14,12 +14,103 @@
       <div class="card-header">
         <h2>System Management</h2>
         <div class="management-buttons">
-          <button id="show-rooms" class="btn btn-primary active">Rooms</button>
+          <button id="show-dashboard" class="btn btn-primary active">Dashboard</button>
+          <button id="show-rooms" class="btn btn-secondary">Rooms</button>
           <button id="show-users" class="btn btn-secondary">Users</button>
         </div>
       </div>
       
-      <div id="rooms-section" class="management-section active">
+      <div id="dashboard-section" class="management-section active">
+        <div class="dashboard-grid">
+          <div class="stats-overview">
+            <h3>System Overview</h3>
+            <div class="stats-cards">
+              <div class="stat-card">
+                <h4>Total Meetings</h4>
+                <span id="total-meetings" class="stat-number">-</span>
+              </div>
+              <div class="stat-card">
+                <h4>Active Users</h4>
+                <span id="active-users" class="stat-number">-</span>
+              </div>
+              <div class="stat-card">
+                <h4>Total Rooms</h4>
+                <span id="total-rooms" class="stat-number">-</span>
+              </div>
+              <div class="stat-card">
+                <h4>Recent Meetings (30 days)</h4>
+                <span id="recent-meetings" class="stat-number">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="meeting-summaries">
+            <div class="summary-section">
+              <h3>Meeting Summary by Week</h3>
+              <div class="time-period-controls">
+                <label for="weeks-select">Period:</label>
+                <select id="weeks-select">
+                  <option value="4">Last 4 weeks</option>
+                  <option value="8">Last 8 weeks</option>
+                  <option value="12">Last 12 weeks</option>
+                </select>
+                <button id="refresh-weekly" class="btn btn-sm btn-primary">Refresh</button>
+              </div>
+              <div id="weekly-summary" class="summary-content">
+                <p>Loading weekly summary...</p>
+              </div>
+            </div>
+
+            <div class="summary-section">
+              <h3>Meeting Summary by Month</h3>
+              <div class="time-period-controls">
+                <label for="months-select">Period:</label>
+                <select id="months-select">
+                  <option value="3">Last 3 months</option>
+                  <option value="6" selected>Last 6 months</option>
+                  <option value="12">Last 12 months</option>
+                </select>
+                <button id="refresh-monthly" class="btn btn-sm btn-primary">Refresh</button>
+              </div>
+              <div id="monthly-summary" class="summary-content">
+                <p>Loading monthly summary...</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="room-usage">
+            <h3>Most Used Rooms</h3>
+            <div class="time-period-controls">
+              <label for="room-days-select">Period:</label>
+              <select id="room-days-select">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="0">All time</option>
+              </select>
+              <label for="room-limit-select">Show:</label>
+              <select id="room-limit-select">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+                <option value="15">Top 15</option>
+              </select>
+              <button id="refresh-rooms" class="btn btn-sm btn-primary">Refresh</button>
+            </div>
+            <div id="room-usage-content" class="room-usage-content">
+              <p>Loading room usage data...</p>
+            </div>
+          </div>
+
+          <div class="user-activity">
+            <h3>Most Active Users</h3>
+            <div id="user-activity-content" class="user-activity-content">
+              <p>Loading user activity data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="rooms-section" class="management-section">
         <div class="add-room-form">
           <h3>Add New Room</h3>
           <form id="add-room-form">

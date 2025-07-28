@@ -81,28 +81,46 @@ function initAdmin() {
   }
   
   function setupTabs() {
+    const showDashboardBtn = document.getElementById('show-dashboard');
     const showRoomsBtn = document.getElementById('show-rooms');
     const showUsersBtn = document.getElementById('show-users');
+    const dashboardSection = document.getElementById('dashboard-section');
     const roomsSection = document.getElementById('rooms-section');
     const usersSection = document.getElementById('users-section');
+
+    function switchToTab(activeBtn, activeSectionId) {
+      // Remove active state from all buttons
+      [showDashboardBtn, showRoomsBtn, showUsersBtn].forEach(btn => {
+        btn.classList.remove('active', 'btn-primary');
+        btn.classList.add('btn-secondary');
+      });
+      
+      // Remove active state from all sections
+      [dashboardSection, roomsSection, usersSection].forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // Activate the selected button and section
+      activeBtn.classList.add('active', 'btn-primary');
+      activeBtn.classList.remove('btn-secondary');
+      document.getElementById(activeSectionId).classList.add('active');
+    }
+  
+    showDashboardBtn.addEventListener('click', () => {
+      switchToTab(showDashboardBtn, 'dashboard-section');
+      loadDashboardData();
+    });
   
     showRoomsBtn.addEventListener('click', () => {
-      showRoomsBtn.classList.add('active', 'btn-primary');
-      showRoomsBtn.classList.remove('btn-secondary');
-      showUsersBtn.classList.remove('active', 'btn-primary');
-      showUsersBtn.classList.add('btn-secondary');
-      usersSection.classList.remove('active');
-      roomsSection.classList.add('active');
+      switchToTab(showRoomsBtn, 'rooms-section');
     });
   
     showUsersBtn.addEventListener('click', () => {
-      showUsersBtn.classList.add('active', 'btn-primary');
-      showUsersBtn.classList.remove('btn-secondary');
-      showRoomsBtn.classList.remove('active', 'btn-primary');
-      showRoomsBtn.classList.add('btn-secondary');
-      roomsSection.classList.remove('active');
-      usersSection.classList.add('active');
+      switchToTab(showUsersBtn, 'users-section');
     });
+    
+    // Load dashboard data on page load
+    loadDashboardData();
   }
   
   let roomFormInitialized = false;
@@ -305,5 +323,203 @@ function deleteUser(userId) {
     return user ? JSON.parse(user) : null;
   }
   
+  // Dashboard functions
+  function loadDashboardData() {
+    loadBasicStats();
+    loadWeeklySummary();
+    loadMonthlySummary();
+    loadMostUsedRooms();
+    loadUserActivity();
+    setupDashboardEventListeners();
+  }
+
+  function loadBasicStats() {
+    fetch('/api/admin/stats', {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('total-meetings').textContent = data.total_meetings || '0';
+      document.getElementById('active-users').textContent = data.active_users || '0';
+      document.getElementById('total-rooms').textContent = data.total_rooms || '0';
+    })
+    .catch(err => {
+      console.error('Failed to load basic stats:', err);
+    });
+
+    // Load dashboard overview
+    fetch('/api/admin/dashboard', {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.overview) {
+        document.getElementById('recent-meetings').textContent = data.overview.recent_meetings || '0';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to load dashboard overview:', err);
+    });
+  }
+
+  function loadWeeklySummary() {
+    const weeks = document.getElementById('weeks-select')?.value || 4;
+    fetch(`/api/admin/meetings/weekly-summary?weeks=${weeks}`, {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      displayWeeklySummary(data);
+    })
+    .catch(err => {
+      console.error('Failed to load weekly summary:', err);
+      document.getElementById('weekly-summary').innerHTML = '<p class="error">Failed to load weekly summary</p>';
+    });
+  }
+
+  function loadMonthlySummary() {
+    const months = document.getElementById('months-select')?.value || 6;
+    fetch(`/api/admin/meetings/monthly-summary?months=${months}`, {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      displayMonthlySummary(data);
+    })
+    .catch(err => {
+      console.error('Failed to load monthly summary:', err);
+      document.getElementById('monthly-summary').innerHTML = '<p class="error">Failed to load monthly summary</p>';
+    });
+  }
+
+  function loadMostUsedRooms() {
+    const days = document.getElementById('room-days-select')?.value || 30;
+    const limit = document.getElementById('room-limit-select')?.value || 10;
+    fetch(`/api/admin/rooms/most-used?days=${days}&limit=${limit}`, {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      displayMostUsedRooms(data);
+    })
+    .catch(err => {
+      console.error('Failed to load room usage:', err);
+      document.getElementById('room-usage-content').innerHTML = '<p class="error">Failed to load room usage data</p>';
+    });
+  }
+
+  function loadUserActivity() {
+    fetch('/api/admin/dashboard', {
+      headers: getAuthHeaders()
+    })
+    .then(res => res.json())
+    .then(data => {
+      displayUserActivity(data.most_active_users);
+    })
+    .catch(err => {
+      console.error('Failed to load user activity:', err);
+      document.getElementById('user-activity-content').innerHTML = '<p class="error">Failed to load user activity data</p>';
+    });
+  }
+
+  function displayWeeklySummary(data) {
+    const container = document.getElementById('weekly-summary');
+    if (!data.weekly_summary || data.weekly_summary.length === 0) {
+      container.innerHTML = '<p>No meetings found for the selected period.</p>';
+      return;
+    }
+
+    let html = '<table class="summary-table"><thead><tr><th>Week</th><th>Meetings</th></tr></thead><tbody>';
+    data.weekly_summary.forEach(week => {
+      html += `<tr>
+        <td>${week.week_start} to ${week.week_end}</td>
+        <td class="number">${week.meeting_count}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    html += `<p class="summary-info">Total: ${data.weekly_summary.reduce((sum, week) => sum + week.meeting_count, 0)} meetings over ${data.total_weeks} weeks</p>`;
+    
+    container.innerHTML = html;
+  }
+
+  function displayMonthlySummary(data) {
+    const container = document.getElementById('monthly-summary');
+    if (!data.monthly_summary || data.monthly_summary.length === 0) {
+      container.innerHTML = '<p>No meetings found for the selected period.</p>';
+      return;
+    }
+
+    let html = '<table class="summary-table"><thead><tr><th>Month</th><th>Meetings</th></tr></thead><tbody>';
+    data.monthly_summary.forEach(month => {
+      html += `<tr>
+        <td>${month.month_name}</td>
+        <td class="number">${month.meeting_count}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    html += `<p class="summary-info">Total: ${data.monthly_summary.reduce((sum, month) => sum + month.meeting_count, 0)} meetings over ${data.total_months} months</p>`;
+    
+    container.innerHTML = html;
+  }
+
+  function displayMostUsedRooms(data) {
+    const container = document.getElementById('room-usage-content');
+    if (!data.most_used_rooms || data.most_used_rooms.length === 0) {
+      container.innerHTML = '<p>No room usage data found for the selected period.</p>';
+      return;
+    }
+
+    let html = '<table class="usage-table"><thead><tr><th>Rank</th><th>Room</th><th>Location</th><th>Meetings</th><th>Total Hours</th><th>Avg Duration</th><th>Score</th></tr></thead><tbody>';
+    data.most_used_rooms.forEach((room, index) => {
+      html += `<tr>
+        <td class="rank">#${index + 1}</td>
+        <td><strong>${room.name}</strong><br><small>Capacity: ${room.capacity}</small></td>
+        <td>${room.location}</td>
+        <td class="number">${room.meeting_count}</td>
+        <td class="number">${room.total_hours}h</td>
+        <td class="number">${room.avg_meeting_duration_minutes}m</td>
+        <td class="score">${room.utilization_score}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    html += `<p class="summary-info">Analysis period: ${data.period} | Total rooms: ${data.total_rooms_analyzed}</p>`;
+    
+    container.innerHTML = html;
+  }
+
+  function displayUserActivity(users) {
+    const container = document.getElementById('user-activity-content');
+    if (!users || users.length === 0) {
+      container.innerHTML = '<p>No user activity data available.</p>';
+      return;
+    }
+
+    let html = '<table class="activity-table"><thead><tr><th>Rank</th><th>User</th><th>Email</th><th>Meetings</th></tr></thead><tbody>';
+    users.forEach((user, index) => {
+      html += `<tr>
+        <td class="rank">#${index + 1}</td>
+        <td>${user.first_name} ${user.last_name}</td>
+        <td>${user.email}</td>
+        <td class="number">${user.meeting_count}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    
+    container.innerHTML = html;
+  }
+
+  function setupDashboardEventListeners() {
+    // Refresh buttons
+    document.getElementById('refresh-weekly')?.addEventListener('click', loadWeeklySummary);
+    document.getElementById('refresh-monthly')?.addEventListener('click', loadMonthlySummary);
+    document.getElementById('refresh-rooms')?.addEventListener('click', loadMostUsedRooms);
+
+    // Dropdown change listeners
+    document.getElementById('weeks-select')?.addEventListener('change', loadWeeklySummary);
+    document.getElementById('months-select')?.addEventListener('change', loadMonthlySummary);
+    document.getElementById('room-days-select')?.addEventListener('change', loadMostUsedRooms);
+    document.getElementById('room-limit-select')?.addEventListener('change', loadMostUsedRooms);
+  }
+
   document.addEventListener('DOMContentLoaded', initAdmin);
   

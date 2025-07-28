@@ -22,6 +22,22 @@
 
     <div class="card">
       <div class="card-header">
+        <h2>Room Availability</h2>
+        <div class="availability-controls">
+          <select id="availability-period" class="form-control">
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+          <button id="refresh-availability" class="btn btn-secondary">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div id="room-availability-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
         <h2>Upcoming Meetings</h2>
       </div>
       <div id="upcoming-meetings"></div>
@@ -34,6 +50,22 @@
     <div class="modal-actions">
       <button id="cancel-confirmation" class="btn btn-secondary">Cancel</button>
       <button id="confirm-action" class="btn btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="room-availability-modal" class="modal hidden">
+  <div class="modal-content room-availability-modal">
+    <div class="modal-header">
+      <h2 id="room-availability-title">Room Availability Details</h2>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="room-availability-details">
+        <div class="loading">
+          <i class="fas fa-spinner fa-spin"></i> Loading availability...
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -11,6 +11,8 @@ Route::post('/jwt-login', [AuthController::class, 'jwtLogin']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', \App\Http\Controllers\UserController::class);
     Route::apiResource('rooms', \App\Http\Controllers\RoomController::class);
+    Route::get('/rooms-availability', [\App\Http\Controllers\RoomController::class, 'availability']);
+    Route::get('/rooms/{room}/availability', [\App\Http\Controllers\RoomController::class, 'roomAvailability']);
 
 Route::apiResource('meetings', \App\Http\Controllers\MeetingController::class)
     ->parameters(['meetings' => 'meeting']);
@@ -26,7 +28,17 @@ Route::get('/meetings/{meeting}/attendees', [MeetingController::class, 'attendee
     });
     Route::post('/logout', [\App\Http\Controllers\AuthController::class, 'logout']);
     Route::get('/profile', [\App\Http\Controllers\AuthController::class, 'profile']);
+
+    // Admin routes - require both authentication and admin role
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/stats', [\App\Http\Controllers\AdminController::class, 'stats']);
+        Route::get('/admin/meetings/weekly-summary', [\App\Http\Controllers\AdminController::class, 'weeklyMeetingSummary']);
+        Route::get('/admin/meetings/monthly-summary', [\App\Http\Controllers\AdminController::class, 'monthlyMeetingSummary']);
+        Route::get('/admin/rooms/most-used', [\App\Http\Controllers\AdminController::class, 'mostUsedRooms']);
+        Route::get('/admin/dashboard', [\App\Http\Controllers\AdminController::class, 'comprehensiveDashboard']);
+    });
 });
+
 
 Route::middleware('auth:api')->group(function () {
     Route::get('/jwt-profile', [AuthController::class, 'jwtProfile']);

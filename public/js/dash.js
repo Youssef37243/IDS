@@ -94,6 +94,7 @@ function initDashboard() {
   }
 
   loadUpcomingMeetings();
+  loadRoomAvailability();
   setupEventListeners();
   
   // Check if user is admin
@@ -227,11 +228,24 @@ function setupEventListeners() {
     });
   }
 
+  // Room availability controls
+  const periodSelect = document.getElementById('availability-period');
+  if (periodSelect) {
+    periodSelect.addEventListener('change', loadRoomAvailability);
+  }
+
+  const refreshBtn = document.getElementById('refresh-availability');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadRoomAvailability);
+  }
+  
   // Meeting actions (delegated events)
   document.addEventListener('click', (e) => {
     const joinBtn = e.target.closest('.join-meeting');
     const editBtn = e.target.closest('.edit-meeting');
     const cancelBtn = e.target.closest('.cancel-meeting');
+    const roomCard = e.target.closest('.room-availability-card');
+    const modalClose = e.target.closest('.modal-close');
     
     if (joinBtn) {
       window.location.href = `/active-meeting?id=${joinBtn.dataset.id}`;
@@ -243,6 +257,27 @@ function setupEventListeners() {
     
     if (cancelBtn) {
       showCancelConfirmation(cancelBtn.dataset.id);
+    }
+
+    if (roomCard) {
+      const roomId = roomCard.dataset.roomId;
+      if (roomId) {
+        showRoomAvailabilityDetails(roomId);
+      }
+    }
+
+    if (modalClose) {
+      const modal = modalClose.closest('.modal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+  });
+
+  // Close modal when clicking outside
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+      e.target.classList.add('hidden');
     }
   });
 }
@@ -305,6 +340,188 @@ function getAuthHeaders() {
 function getCurrentUser() {
   const user = localStorage.getItem('currentUser');
   return user ? JSON.parse(user) : null;
+}
+
+// Room Availability Functions
+async function loadRoomAvailability() {
+  try {
+    const periodSelect = document.getElementById('availability-period');
+    const period = periodSelect ? periodSelect.value : 'week';
+    
+    const response = await fetch(`/api/rooms-availability?period=${period}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) throw new Error('Failed to load room availability');
+    
+    const data = await response.json();
+    renderRoomAvailability(data);
+  } catch (error) {
+    console.error('Error loading room availability:', error);
+    const grid = document.getElementById('room-availability-grid');
+    if (grid) {
+      grid.innerHTML = '<p class="error">Failed to load room availability. Please try again.</p>';
+    }
+  }
+}
+
+function renderRoomAvailability(data) {
+  const grid = document.getElementById('room-availability-grid');
+  if (!grid) return;
+  
+  grid.innerHTML = '';
+  
+  if (!data.rooms || data.rooms.length === 0) {
+    grid.innerHTML = '<p>No rooms available.</p>';
+    return;
+  }
+
+  data.rooms.forEach(roomData => {
+    const room = roomData.room;
+    const availability = roomData.availability_summary;
+    
+    // Calculate overall availability status
+    const totalDays = Object.keys(availability).length;
+    const availableDays = Object.values(availability).filter(day => day === 'Available all day').length;
+    const availabilityPercentage = Math.round((availableDays / totalDays) * 100);
+    
+    let statusClass = 'high';
+    if (availabilityPercentage < 30) statusClass = 'low';
+    else if (availabilityPercentage < 70) statusClass = 'medium';
+    
+    const roomCard = document.createElement('div');
+    roomCard.className = 'room-availability-card';
+    roomCard.dataset.roomId = room.id;
+    
+    roomCard.innerHTML = `
+      <div class="room-header">
+        <h3>${room.name}</h3>
+        <div class="availability-badge ${statusClass}">
+          ${availabilityPercentage}% Available
+        </div>
+      </div>
+      <div class="room-details">
+        <p><i class="fas fa-map-marker-alt"></i> ${room.location || 'No location specified'}</p>
+        <p><i class="fas fa-users"></i> Capacity: ${room.capacity}</p>
+        ${room.feature ? `<p><i class="fas fa-star"></i> ${room.feature}</p>` : ''}
+      </div>
+      <div class="availability-preview">
+        ${renderAvailabilityPreview(availability)}
+      </div>
+      <div class="room-actions">
+        <button class="btn btn-primary">
+          <i class="fas fa-eye"></i> View Details
+        </button>
+      </div>
+    `;
+    
+    grid.appendChild(roomCard);
+  });
+}
+
+function renderAvailabilityPreview(availability) {
+  const days = Object.keys(availability).slice(0, 7); // Show first 7 days
+  let preview = '<div class="availability-days">';
+  
+  days.forEach(day => {
+    const dayData = availability[day];
+    const isAvailable = dayData === 'Available all day';
+    const dayName = new Date(day).toLocaleDateString('en', { weekday: 'short' });
+    
+    preview += `
+      <div class="availability-day ${isAvailable ? 'available' : 'busy'}">
+        <span class="day-name">${dayName}</span>
+        <div class="day-status ${isAvailable ? 'available' : 'busy'}"></div>
+      </div>
+    `;
+  });
+  
+  preview += '</div>';
+  return preview;
+}
+
+async function showRoomAvailabilityDetails(roomId) {
+  const modal = document.getElementById('room-availability-modal');
+  const title = document.getElementById('room-availability-title');
+  const details = document.getElementById('room-availability-details');
+  
+  if (!modal || !title || !details) return;
+  
+  // Show modal with loading state
+  details.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading availability...</div>';
+  modal.classList.remove('hidden');
+  
+  try {
+    const periodSelect = document.getElementById('availability-period');
+    const period = periodSelect ? periodSelect.value : 'week';
+    
+    const response = await fetch(`/api/rooms/${roomId}/availability?period=${period}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) throw new Error('Failed to load room details');
+    
+    const data = await response.json();
+    
+    title.textContent = `${data.room.name} - Availability Details`;
+    renderRoomAvailabilityDetails(data, details);
+    
+  } catch (error) {
+    console.error('Error loading room details:', error);
+    details.innerHTML = '<p class="error">Failed to load room availability details. Please try again.</p>';
+  }
+}
+
+function renderRoomAvailabilityDetails(data, container) {
+  const { room, availability, period, start_date, end_date } = data;
+  
+  let html = `
+    <div class="room-details-header">
+      <h3>${room.name}</h3>
+      <p><i class="fas fa-map-marker-alt"></i> ${room.location || 'No location specified'}</p>
+      <p><i class="fas fa-users"></i> Capacity: ${room.capacity}</p>
+      ${room.feature ? `<p><i class="fas fa-star"></i> ${room.feature}</p>` : ''}
+    </div>
+    <div class="availability-period">
+      <p><strong>Period:</strong> ${period === 'week' ? 'Week' : 'Month'} 
+      (${new Date(start_date).toLocaleDateString()} - ${new Date(end_date).toLocaleDateString()})</p>
+    </div>
+    <div class="availability-details">
+  `;
+  
+  Object.keys(availability).forEach(date => {
+    const dayData = availability[date];
+    const dayName = new Date(date).toLocaleDateString('en', { 
+      weekday: 'long', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    
+    html += `
+      <div class="day-availability">
+        <h4>${dayName}</h4>
+    `;
+    
+    if (dayData === 'Available all day') {
+      html += `<p class="available-all-day"><i class="fas fa-check-circle"></i> Available all day</p>`;
+    } else if (Array.isArray(dayData)) {
+      html += `<div class="busy-periods">`;
+      dayData.forEach(period => {
+        html += `
+          <div class="busy-period">
+            <span class="time-range">${period.start_time} - ${period.end_time}</span>
+            <span class="meeting-title">${period.title}</span>
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+    
+    html += `</div>`;
+  });
+  
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);
