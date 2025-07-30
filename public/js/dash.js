@@ -199,7 +199,7 @@ function createMeetingElement(meeting, currentUser) {
           <i class="fas fa-edit"></i> Edit
         </button>
       ` : ''}
-      ${currentUser.role === 'admin' && isOrganizer ? `
+      ${currentUser.role === 'admin' && isOrganizer || currentUser.role === 'user' && isOrganizer ? `
         <button class="btn btn-danger cancel-meeting" data-id="${meeting.id}">
           <i class="fas fa-trash"></i> Cancel
         </button>
